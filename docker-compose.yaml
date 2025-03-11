@@ -1,14 +1,14 @@
 services:
   db:
     image: postgres
-    container_name: postgres_db
+    container_name: chat_rg
     environment:
-      POSTGRES_DB: chat_rg_pq
+      POSTGRES_DB: default
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin_password
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - chat_rg_main_db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 volumes:
-  db-data:
+  chat_rg_main_db-data:
