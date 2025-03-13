@@ -1,19 +1,21 @@
 package main
 
 import (
-	"fmt"
-	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/9thDuck/chat_go.git/internal/auth"
 	"github.com/9thDuck/chat_go.git/internal/store"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 type application struct {
-	config config
-	store  store.Storage
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	authenticator auth.Authenticator
 }
 
 func (app *application) mount() http.Handler {
@@ -29,6 +31,7 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/signup", app.signupHandler)
+			r.Post("/login", app.loginHandler)
 		})
 	})
 
@@ -43,7 +46,7 @@ func (app *application) run(handler http.Handler) error {
 		IdleTimeout:  time.Minute,
 		Handler:      handler,
 	}
-	slog.Info(fmt.Sprintf("Server listening at port %s", app.config.addr))
+	app.logger.Info("Server listening", "port", app.config.addr)
 
 	return srv.ListenAndServe()
 }

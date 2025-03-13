@@ -9,6 +9,7 @@ import (
 type Storage struct {
 	Users interface {
 		Create(ctx context.Context, userP *User) error
+		GetByEmail(ctx context.Context, email string) (*User, error)
 	}
 }
 

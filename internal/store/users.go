@@ -41,6 +41,11 @@ func (u *User) SetHashedPassword(password string) error {
 	return nil
 }
 
+func (u *User) ValidateCredentials(password string) bool {
+	return bcrypt.
+		CompareHashAndPassword([]byte(u.HashedPassword), []byte(password)) == nil
+}
+
 func (s *UserStorage) Create(ctx context.Context, userP *User) error {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
@@ -76,4 +81,39 @@ func (s *UserStorage) Create(ctx context.Context, userP *User) error {
 	}
 
 	return nil
+}
+
+func (s *UserStorage) GetByEmail(ctx context.Context, email string) (*User, error) {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+
+	query :=
+		`SELECT
+		 id, username, hashed_password, first_name, last_name, created_at, updated_at 
+		 FROM users 
+		 WHERE email = $1`
+
+	user := User{
+		Email: email,
+	}
+
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		user.Email,
+	).Scan(
+		&user.ID,
+		&user.Username,
+		&user.HashedPassword,
+		&user.FirstName,
+		&user.LastName,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
