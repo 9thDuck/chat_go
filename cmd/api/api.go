@@ -26,6 +26,10 @@ func (app *application) mount() http.Handler {
 
 	handler.Route("/v1", func(r chi.Router) {
 		r.Get("/", app.getHomeHandler)
+
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/signup", app.signupHandler)
+		})
 	})
 
 	return handler
