@@ -32,6 +32,7 @@ func (app *application) mount() http.Handler {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/signup", app.signupHandler)
 			r.Post("/login", app.loginHandler)
+			// r.Delete("/logout", app.logoutHandler)
 		})
 	})
 
@@ -46,7 +47,7 @@ func (app *application) run(handler http.Handler) error {
 		IdleTimeout:  time.Minute,
 		Handler:      handler,
 	}
-	app.logger.Info("Server listening", "port", app.config.addr)
+	app.logger.Infow("Server listening", "port", app.config.addr)
 
 	return srv.ListenAndServe()
 }
