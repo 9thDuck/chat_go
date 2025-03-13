@@ -17,7 +17,7 @@ type SignupPayload struct {
 
 func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 	payload := SignupPayload{}
-	if err := readJson(r, &payload); err != nil {
+	if err := readJson(w, r, &payload); err != nil {
 		app.badRequestError(w, r, err, "")
 		return
 	}

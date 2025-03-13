@@ -27,7 +27,9 @@ func (app *application) writeJsonError(w http.ResponseWriter, status int, errorM
 	return writeJson(w, status, &errorEnvelope{Error: errorMsg})
 }
 
-func readJson(r *http.Request, target any) error {
+func readJson(w http.ResponseWriter, r *http.Request, target any) error {
+	maxBytes := 1_048_578
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(target); err != nil {
 		return err
