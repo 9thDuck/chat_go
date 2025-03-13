@@ -26,3 +26,11 @@ func (app *application) jsonResponse(w http.ResponseWriter, status int, data any
 func (app *application) writeJsonError(w http.ResponseWriter, status int, errorMsg string) error {
 	return writeJson(w, status, &errorEnvelope{Error: errorMsg})
 }
+
+func readJson(r *http.Request, target any) error {
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	return nil
+}
