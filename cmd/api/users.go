@@ -8,9 +8,8 @@ import (
 )
 
 const (
-	userCtxKey        ctxKey = "user"
-	userIDCtxKey      ctxKey = "userID"
-	otherUserIDCtxKey ctxKey = "otherUserID"
+	userCtxKey   ctxKey = "user"
+	userIDCtxKey ctxKey = "userID"
 )
 
 func getUserFromCtx(r *http.Request) *store.User {
@@ -32,19 +31,18 @@ func deleteCookie(w http.ResponseWriter, cookieName string) {
 	})
 }
 func (app *application) getUserByIDHandler(w http.ResponseWriter, r *http.Request) {
-	// Get the ID from context that was set by middleware
-	otherUserID := getOtherUserIDFromCtx(r)
+	userIDFromParam := getUserIDParamFromCtx(r)
 
 	// Log for debugging
-	app.logger.Infow("User ID from context", "otherUserID", otherUserID)
+	app.logger.Infow("User ID from context", "otherUserID", userIDFromParam)
 
-	if otherUserID == 0 {
+	if userIDFromParam == 0 {
 		app.badRequestError(w, r, errors.New("user ID is required"), "")
 		return
 	}
 
 	ctx := r.Context()
-	user, err := app.getUser(ctx, otherUserID)
+	user, err := app.getUser(ctx, userIDFromParam)
 	if err != nil {
 		switch {
 		case errors.Is(err, store.ErrNotFound):
@@ -60,8 +58,12 @@ func (app *application) getUserByIDHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 }
-func getOtherUserIDFromCtx(r *http.Request) int64 {
-	val := r.Context().Value(otherUserIDCtxKey)
+
+func (app *application) updateUserByIDHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+func getUserIDParamFromCtx(r *http.Request) int64 {
+	val := r.Context().Value(userIDCtxKey)
 	if val == nil {
 		return 0
 	}

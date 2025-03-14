@@ -194,7 +194,7 @@ func getUserIDFromToken(token *jwt.Token) (int64, error) {
 
 func (app *application) getUserIDParamMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		idParam := chi.URLParam(r, "otherUserID")
+		idParam := chi.URLParam(r, string(userIDCtxKey))
 		fmt.Println(idParam, len(idParam))
 
 		id, err := strconv.ParseInt(idParam, 10, 64)
@@ -203,7 +203,7 @@ func (app *application) getUserIDParamMiddleware(next http.Handler) http.Handler
 			app.badRequestError(w, r, err, "")
 			return
 		}
-		ctxWithValue := context.WithValue(r.Context(), otherUserIDCtxKey, id)
+		ctxWithValue := context.WithValue(r.Context(), userIDCtxKey, id)
 
 		next.ServeHTTP(w, r.WithContext(ctxWithValue))
 	})

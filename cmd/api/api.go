@@ -41,7 +41,7 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/users", func(r chi.Router) {
 			r.Use(app.ValidateTokenMiddleware())
-			r.Route("/{otherUserID}", func(r chi.Router) {
+			r.Route("/{userID}", func(r chi.Router) {
 				r.Use(app.getUserIDParamMiddleware)
 				r.Get("/", app.getUserByIDHandler)
 			})
