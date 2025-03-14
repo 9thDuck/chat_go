@@ -10,6 +10,7 @@ const (
 	DefaultNotFoundErrMsg                     = "record not found"
 	DefaultConflictErrMsg                     = "resource already exists"
 	DefaultSomethingWentWrongErrMsg           = "something went wrong, try again later"
+	DefaultUnauthorizedErrorMsg               = "unauthorized"
 	DefaultAuthorizationHeaderMissingErrMsg   = "authorization header missing"
 	DefaultAuthorizationHeaderMalformedErrMsg = "malformed authorization error"
 	DefaultInvalidCredentialsErrMsg           = "invalid credentials"
@@ -24,6 +25,7 @@ var (
 	ErrSomethingWenWrong = errors.New(DefaultSomethingWentWrongErrMsg)
 
 	// auth
+	ErrUnautorized                  = errors.New(DefaultUnauthorizedErrorMsg)
 	ErrAuthorizationHeaderMissing   = errors.New(DefaultAuthorizationHeaderMissingErrMsg)
 	ErrAuthorizationHeaderMalformed = errors.New(DefaultAuthorizationHeaderMalformedErrMsg)
 	ErrInvalidCredentials           = errors.New(DefaultInvalidCredentialsErrMsg)

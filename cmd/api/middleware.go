@@ -50,7 +50,7 @@ func (app *application) ValidateTokenMiddleware() func(http.Handler) http.Handle
 				user, err := app.getUser(ctx, refreshTokenUserID)
 				if err != nil {
 					if errors.Is(err, store.ErrNotFound) {
-						app.notFoundError(w, r, err, "")
+						app.unauthorizedError(w, r, store.ErrUnautorized)
 						return
 					}
 					app.internalError(w, r, err)
@@ -78,7 +78,7 @@ func (app *application) ValidateTokenMiddleware() func(http.Handler) http.Handle
 			user, err := app.getUser(ctx, accessTokenUserID)
 			if err != nil {
 				if errors.Is(err, store.ErrNotFound) {
-					app.notFoundError(w, r, err, "")
+					app.unauthorizedError(w, r, store.ErrUnautorized)
 					return
 				}
 				app.internalError(w, r, err)
