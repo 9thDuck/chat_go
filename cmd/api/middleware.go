@@ -26,6 +26,10 @@ func (app *application) ValidateTokenMiddleware() func(http.Handler) http.Handle
 				app.unauthorizedError(w, r, err)
 				return
 			}
+			if accessTokenCookie.Value == "" || refreshTokenCookie.Value == "" {
+				app.unauthorizedError(w, r, nil)
+				return
+			}
 			ctx := r.Context()
 
 			accessToken, err := app.authenticator.ValidateTokenAndParse(accessTokenCookie.Value)
