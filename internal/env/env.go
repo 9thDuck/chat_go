@@ -25,3 +25,14 @@ func GetEnvInt(key string, fallback int) int {
 	}
 	return fallback
 }
+
+func GetBool(key string, fallback bool) bool {
+	if val := os.Getenv(key); val != "" {
+		boolVal, err := strconv.ParseBool(val)
+		if err != nil {
+			return fallback
+		}
+		return boolVal
+	}
+	return fallback
+}

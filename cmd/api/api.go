@@ -6,6 +6,7 @@ import (
 
 	"github.com/9thDuck/chat_go.git/internal/auth"
 	"github.com/9thDuck/chat_go.git/internal/store"
+	"github.com/9thDuck/chat_go.git/internal/store/cache"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -14,9 +15,12 @@ import (
 type application struct {
 	config        config
 	store         store.Storage
+	cache         cache.Storage
 	logger        *zap.SugaredLogger
 	authenticator auth.Authenticator
 }
+
+type ctxKey string
 
 func (app *application) mount() http.Handler {
 	handler := chi.NewRouter()
@@ -33,6 +37,14 @@ func (app *application) mount() http.Handler {
 			r.Post("/signup", app.signupHandler)
 			r.Post("/login", app.loginHandler)
 			// r.Delete("/logout", app.logoutHandler)
+		})
+
+		r.Route("/users", func(r chi.Router) {
+			r.Use(app.ValidateTokenMiddleware())
+			r.Route("/{otherUserID}", func(r chi.Router) {
+				r.Use(app.getUserIDParamMiddleware)
+				r.Get("/", app.getUserByIDHandler)
+			})
 		})
 	})
 

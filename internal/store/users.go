@@ -3,12 +3,15 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserStorage struct {
+type UsersStore struct {
 	db *sql.DB
 }
 
@@ -19,6 +22,8 @@ type User struct {
 	HashedPassword string `json:"-"`
 	FirstName      string `json:"first_name"`
 	LastName       string `json:"last_name"`
+	RoleID         int64  `json:"role_id"`
+	Role           *Role  `json:"role"`
 	CreatedAt      string `json:"created_at"`
 	UpdatedAt      string `json:"updated_at"`
 }
@@ -46,36 +51,104 @@ func (u *User) ValidateCredentials(password string) bool {
 		CompareHashAndPassword([]byte(u.HashedPassword), []byte(password)) == nil
 }
 
-func (s *UserStorage) Create(ctx context.Context, userP *User) error {
+func (s *UsersStore) Create(ctx context.Context, user *User) error {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
-
-	query :=
-		`INSERT INTO users (
-			username, email, hashed_password, first_name, last_name
-		) VALUES (
-		 	$1, $2, $3, $4, $5
-		) RETURNING id, created_at, updated_at`
+	fmt.Println(user)
+	query := `WITH inserted_user AS (
+			INSERT INTO users (
+				username,
+				first_name,
+				last_name,
+				hashed_password,
+				email, 
+				role_id
+			)
+			VALUES ($1, $2, $3, $4, $5, 
+				(SELECT r.id FROM roles r WHERE r.name = $6)
+			)
+			RETURNING id, role_id, created_at, updated_at
+		)
+		SELECT 
+			iu.id, 
+			iu.role_id, 
+			iu.role_id,
+			r.level, 
+			r.description,
+			iu.created_at, 
+			iu.updated_at
+		FROM inserted_user iu
+		JOIN roles r ON r.id = iu.role_id;`
 
 	err := s.db.QueryRowContext(
 		ctx,
 		query,
-		userP.Username,
-		userP.Email,
-		userP.HashedPassword,
-		userP.FirstName,
-		userP.LastName,
+		user.Username,
+		user.FirstName,
+		user.LastName,
+		user.HashedPassword,
+		user.Email,
+		user.Role.Name,
 	).Scan(
-		&userP.ID,
-		&userP.CreatedAt,
-		&userP.UpdatedAt,
+		&user.ID,
+		&user.RoleID,
+		&user.Role.ID,
+		&user.Role.Level,
+		&user.Role.Description,
+		&user.CreatedAt,
+		&user.UpdatedAt,
 	)
 
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
-			if pqErr.Code == PQ_CODE_UNIQUE_CONSTRAINT_VIOLATION {
-				return ErrConflict
+			pqErrorMsg := pqErr.Error()
+			switch {
+			case strings.Contains(pqErrorMsg, "users_email_key"):
+				return ErrDuplicateMail
+			case strings.Contains(pqErrorMsg, "users_username_key"):
+				return ErrDuplicateUsername
+			default:
+				return err
 			}
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *UsersStore) GetByID(ctx context.Context, user *User) error {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+	query := `
+		SELECT 
+		u.username, u.email, u.hashed_password, u.first_name, u.last_name, u.role_id, u.created_at, u.updated_at,
+		r.id, r.name, r.level, r.description
+		FROM 
+		users u JOIN roles r ON u.role_id = r.id
+		WHERE u.id=$1`
+
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		user.ID,
+	).Scan(
+		&user.Username,
+		&user.Email,
+		&user.HashedPassword,
+		&user.FirstName,
+		&user.LastName,
+		&user.RoleID,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.Role.ID,
+		&user.Role.Name,
+		&user.Role.Level,
+		&user.Role.Description,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
 		}
 		return err
 	}
@@ -83,7 +156,7 @@ func (s *UserStorage) Create(ctx context.Context, userP *User) error {
 	return nil
 }
 
-func (s *UserStorage) GetByEmail(ctx context.Context, email string) (*User, error) {
+func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"github.com/9thDuck/chat_go.git/internal/db"
 	"github.com/9thDuck/chat_go.git/internal/env"
 	"github.com/9thDuck/chat_go.git/internal/store"
+	"github.com/9thDuck/chat_go.git/internal/store/cache"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
@@ -59,6 +61,14 @@ func main() {
 					}},
 			},
 			appName: env.GetEnvString("APP_NAME", "DuckChat"),
+			cacheCfg: cacheCfg{
+				redis: redisCfg{
+					enabled: env.GetBool("REDIS_CACHE_ENABLED", false),
+					addr:    env.GetEnvString("REDIS_ADDR", "localhost:6379"),
+					db:      env.GetEnvInt("REDIS_DB", 0),
+					pw:      env.GetEnvString("REDIS_PW", ""),
+				},
+			},
 		}
 
 	jwtAuthenticator :=
@@ -84,12 +94,28 @@ func main() {
 	store := store.NewStorage(dbConn)
 
 	logger := zap.Must(zap.NewProduction()).Sugar()
+	var cacheStore cache.Storage
+	if conf.cacheCfg.redis.enabled {
+		rdb := cache.NewRedisClient(
+			conf.cacheCfg.redis.addr,
+			conf.cacheCfg.redis.pw,
+			conf.cacheCfg.redis.db,
+		)
+		cacheStore = cache.NewRedisStorage(rdb)
+		msg, err := rdb.Ping(context.Background()).Result()
+		if err == nil {
+			logger.Infow("cache:redis initiased", "pinged redis", fmt.Sprintf("redis said %s", msg))
+			conf.cacheCfg.initialised = true
+		}
+	}
+
 	defer logger.Sync()
 	app := &application{
 		config:        conf,
 		store:         store,
 		logger:        logger,
 		authenticator: jwtAuthenticator,
+		cache:         cacheStore,
 	}
 
 	mux := app.mount()

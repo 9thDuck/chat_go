@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/9thDuck/chat_go.git/internal/auth"
 )
 
@@ -19,6 +17,25 @@ type tokenConfig struct {
 }
 
 type authConfig struct {
-	basic basicAuthConfig
 	token tokenConfig
+}
+
+type redisCfg struct {
+	addr    string
+	pw      string
+	db      int
+	enabled bool
+}
+
+type cacheCfg struct {
+	initialised bool
+	redis       redisCfg
+}
+type config struct {
+	appName  string
+	addr     string
+	dbConfig dbConfig
+	env      string
+	auth     authConfig
+	cacheCfg cacheCfg
 }

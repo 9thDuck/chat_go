@@ -17,6 +17,7 @@ type SignupPayload struct {
 	Password  string `json:"password" validate:"required,min=8,max=20"`
 	FirstName string `json:"first_name" validate:"omitempty,min=8,max=30"`
 	LastName  string `json:"last_name" validate:"omitempty,min=8,max=30"`
+	RoleName  string `json:"role_name" validate:"required,oneof=admin moderator user"`
 }
 
 type LoginPayload struct {
@@ -43,14 +44,20 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 		payload.FirstName,
 		payload.LastName,
 	)
+	userP.Role = &store.Role{
+		Name: payload.RoleName,
+	}
 	userP.SetHashedPassword(payload.Password)
 
 	if err := app.store.Users.Create(ctx, userP); err != nil {
-		if errors.Is(err, store.ErrConflict) {
+		switch err {
+		case store.ErrDuplicateMail:
 			app.badRequestError(w, r, err, "")
-			return
+		case store.ErrDuplicateUsername:
+			app.badRequestError(w, r, err, "")
+		default:
+			app.internalError(w, r, err)
 		}
-		app.internalError(w, r, err)
 		return
 	}
 
@@ -72,19 +79,19 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userP, err := app.store.Users.GetByEmail(r.Context(), payload.Email)
+	user, err := app.store.Users.GetByEmail(r.Context(), payload.Email)
 
 	if err != nil {
 		app.notFoundError(w, r, err, DefaultUserNotFoundErrMsg)
 		return
 	}
 
-	if !userP.ValidateCredentials(payload.Password) {
+	if !user.ValidateCredentials(payload.Password) {
 		app.badRequestError(w, r, errors.New(DefaultUserNotFoundErrMsg), "")
 		return
 	}
 
-	accessTokenCookie, refreshTokenCookie, err := app.makeAuthCookiesSet(userP.ID)
+	accessTokenCookie, refreshTokenCookie, err := app.makeAuthCookiesSet(user.ID)
 	if err != nil {
 		app.internalError(w, r, err)
 		return
@@ -92,7 +99,11 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, accessTokenCookie)
 	http.SetCookie(w, refreshTokenCookie)
-	w.WriteHeader(http.StatusNoContent)
+
+	if err := app.jsonResponse(w, http.StatusOK, &user); err != nil {
+		app.internalError(w, r, err)
+		return
+	}
 }
 
 func (app *application) makeAuthCookiesSet(userID int64) (accessCookie *http.Cookie, refreshCookie *http.Cookie, err error) {
