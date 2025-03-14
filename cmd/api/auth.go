@@ -115,7 +115,7 @@ func (app *application) makeAuthCookiesSet(userID int64) (accessCookie *http.Coo
 		"sub": userID,
 		"iss": app.config.appName,
 		"aud": app.config.appName,
-		"exp": time.Now().Add(app.config.auth.token.exp.Access).Unix(),
+		"exp": timeNow.Add(app.config.auth.token.exp.Access).Unix(),
 		"nbf": timeNow.Unix(),
 		"iat": timeNow.Unix(),
 	}
@@ -123,7 +123,7 @@ func (app *application) makeAuthCookiesSet(userID int64) (accessCookie *http.Coo
 		"sub": userID,
 		"iss": app.config.appName,
 		"aud": app.config.appName,
-		"exp": time.Now().Add(app.config.auth.token.exp.Refresh).Unix(),
+		"exp": timeNow.Add(app.config.auth.token.exp.Refresh).Unix(),
 		"nbf": timeNow.Unix(),
 		"iat": timeNow.Unix(),
 	}
