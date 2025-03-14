@@ -36,7 +36,7 @@ func (app *application) mount() http.Handler {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/signup", app.signupHandler)
 			r.Post("/login", app.loginHandler)
-			// r.Delete("/logout", app.logoutHandler)
+			r.With(app.ValidateTokenMiddleware()).Delete("/logout", app.logoutHandler)
 		})
 
 		r.Route("/users", func(r chi.Router) {

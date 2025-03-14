@@ -102,6 +102,12 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	deleteCookie(w, "access_token")
+	deleteCookie(w, "refresh_token")
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (app *application) makeAuthCookiesSet(userID int64) (accessCookie *http.Cookie, refreshCookie *http.Cookie, err error) {
 	timeNow := time.Now()
 
