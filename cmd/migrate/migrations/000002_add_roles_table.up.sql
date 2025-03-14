@@ -9,20 +9,20 @@ INSERT INTO
     roles (name, description, level)
 VALUES(
     'user',
-    'A user can create posts and comments',
+    'A user can create message and group chats',
     1
 );
 INSERT INTO
     roles (name, description, level)
 VALUES(
     'moderator',
-    'A moderator can update other user posts',
+    'A moderator can delete messages in group chats',
     2
 );
 INSERT INTO
     roles (name, description, level)
 VALUES(
     'admin',
-    'nd admin can update and delete other user posts',
+    'admin can delete users',
     3
 );
