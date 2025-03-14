@@ -200,3 +200,26 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 
 	return &user, nil
 }
+
+func (s *UsersStore) UpdateUserDataByID(ctx context.Context, user *User) error {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+
+	query := `
+		UPDATE users 
+		SET first_name = $1, last_name = $2, profile_pic = $3 
+		WHERE id = $4`
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		user.FirstName,
+		user.LastName,
+		user.ProfilePic,
+		user.ID,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -44,6 +44,7 @@ func (app *application) mount() http.Handler {
 			r.Route("/{userID}", func(r chi.Router) {
 				r.Use(app.getUserIDParamMiddleware)
 				r.Get("/", app.getUserByIDHandler)
+				r.Patch("/", app.userDetailsUpdateGuardMiddleware(app.updateUserByIDHandler))
 			})
 		})
 	})

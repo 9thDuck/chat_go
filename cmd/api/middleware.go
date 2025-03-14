@@ -91,6 +91,20 @@ func (app *application) ValidateTokenMiddleware() func(http.Handler) http.Handle
 	}
 }
 
+func (app *application) userDetailsUpdateGuardMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userIDFromParam := getUserIDParamFromCtx(r)
+		user := getUserFromCtx(r)
+
+		if user.ID != userIDFromParam {
+			app.unauthorizedError(w, r, store.ErrUnautorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // func (app *application) deleteUserAuthorityCheckMiddleware(requiredRoleName string, next http.HandlerFunc) http.HandlerFunc {
 // 	return http.HandlerFunc(
 // 		func(w http.ResponseWriter, r *http.Request) {

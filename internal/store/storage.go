@@ -11,6 +11,7 @@ type Storage struct {
 		Create(ctx context.Context, userP *User) error
 		GetByEmail(ctx context.Context, email string) (*User, error)
 		GetByID(ctx context.Context, userP *User) error
+		UpdateUserDataByID(ctx context.Context, user *User) error
 	}
 
 	Roles interface {
