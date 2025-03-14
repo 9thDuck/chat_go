@@ -165,12 +165,14 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 
 	query :=
 		`SELECT
-		 id, username, hashed_password, first_name, last_name, created_at, updated_at 
-		 FROM users 
-		 WHERE email = $1`
+		 u.id, u.username, u.hashed_password, u.first_name, u.last_name, u.role_id, u.created_at, u.updated_at,
+		 r.id, r.name, r.description, r.level
+		 FROM users u JOIN roles r ON r.id = u.role_id
+		 WHERE u.email = $1`
 
 	user := User{
 		Email: email,
+		Role:  &Role{},
 	}
 
 	err := s.db.QueryRowContext(
@@ -183,8 +185,13 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 		&user.HashedPassword,
 		&user.FirstName,
 		&user.LastName,
+		&user.RoleID,
 		&user.CreatedAt,
 		&user.UpdatedAt,
+		&user.Role.ID,
+		&user.Role.Name,
+		&user.Role.Description,
+		&user.Role.Level,
 	)
 
 	if err != nil {
