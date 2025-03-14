@@ -12,12 +12,9 @@ import (
 const DefaultUserNotFoundErrMsg = "either credentials are invalid or user doesn't exist"
 
 type SignupPayload struct {
-	Username  string `json:"username" validate:"required,min=8,max=30"`
-	Email     string `json:"email" validate:"email,required,max=150"`
-	Password  string `json:"password" validate:"required,min=8,max=20"`
-	FirstName string `json:"first_name" validate:"omitempty,min=8,max=30"`
-	LastName  string `json:"last_name" validate:"omitempty,min=8,max=30"`
-	RoleName  string `json:"role_name" validate:"required,oneof=admin moderator user"`
+	Username string `json:"username" validate:"required,min=8,max=30"`
+	Email    string `json:"email" validate:"email,required,max=150"`
+	Password string `json:"password" validate:"required,min=8,max=20"`
 }
 
 type LoginPayload struct {
@@ -38,18 +35,17 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	userP := store.NewUser(
-		payload.Username,
-		payload.Email,
-		payload.FirstName,
-		payload.LastName,
-	)
-	userP.Role = &store.Role{
-		Name: payload.RoleName,
+	user := store.User{
+		Username: payload.Username,
+		Email:    payload.Email,
+		Role: &store.Role{
+			Name: "user",
+		},
 	}
-	userP.SetHashedPassword(payload.Password)
 
-	if err := app.store.Users.Create(ctx, userP); err != nil {
+	user.SetHashedPassword(payload.Password)
+
+	if err := app.store.Users.Create(ctx, &user); err != nil {
 		switch err {
 		case store.ErrDuplicateMail:
 			app.badRequestError(w, r, err, "")
@@ -61,7 +57,7 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := app.jsonResponse(w, http.StatusCreated, userP); err != nil {
+	if err := app.jsonResponse(w, http.StatusCreated, user); err != nil {
 		app.internalError(w, r, err)
 		return
 	}

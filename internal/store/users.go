@@ -22,6 +22,7 @@ type User struct {
 	HashedPassword string `json:"-"`
 	FirstName      string `json:"first_name"`
 	LastName       string `json:"last_name"`
+	ProfilePic     string `json:"profile_pic"`
 	RoleID         int64  `json:"role_id"`
 	Role           *Role  `json:"role"`
 	CreatedAt      string `json:"created_at"`
@@ -58,14 +59,15 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 	query := `WITH inserted_user AS (
 			INSERT INTO users (
 				username,
-				first_name,
-				last_name,
 				hashed_password,
 				email, 
+				first_name,
+				last_name,
+				profile_pic,
 				role_id
 			)
-			VALUES ($1, $2, $3, $4, $5, 
-				(SELECT r.id FROM roles r WHERE r.name = $6)
+			VALUES ($1, $2, $3, $4, $5, $6,
+				(SELECT r.id FROM roles r WHERE r.name = $7)
 			)
 			RETURNING id, role_id, created_at, updated_at
 		)
@@ -84,10 +86,11 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 		ctx,
 		query,
 		user.Username,
-		user.FirstName,
-		user.LastName,
 		user.HashedPassword,
 		user.Email,
+		user.FirstName,
+		user.LastName,
+		user.ProfilePic,
 		user.Role.Name,
 	).Scan(
 		&user.ID,
