@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/9thDuck/chat_go.git/internal/auth"
+	cloudStorage "github.com/9thDuck/chat_go.git/internal/cloud_storage"
 	"github.com/9thDuck/chat_go.git/internal/store"
 	"github.com/9thDuck/chat_go.git/internal/store/cache"
 	"github.com/go-chi/chi/middleware"
@@ -18,6 +19,7 @@ type application struct {
 	cache         cache.Storage
 	logger        *zap.SugaredLogger
 	authenticator auth.Authenticator
+	cloud         *cloudStorage.CloudStorage
 }
 
 type ctxKey string
@@ -45,6 +47,13 @@ func (app *application) mount() http.Handler {
 				r.Use(app.getUserIDParamMiddleware)
 				r.Get("/", app.getUserByIDHandler)
 				r.Patch("/", app.userDetailsUpdateGuardMiddleware(app.updateUserByIDHandler))
+			})
+		})
+
+		r.Route("/cloud", func(r chi.Router) {
+			r.Use(app.ValidateTokenMiddleware())
+			r.Route("/presignedurl", func(r chi.Router) {
+				r.Get("/{objectKey}", app.getPresignedS3URLHandler)
 			})
 		})
 	})

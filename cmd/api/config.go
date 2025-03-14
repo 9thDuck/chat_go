@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/9thDuck/chat_go.git/internal/auth"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type dbConfig struct {
@@ -31,11 +32,21 @@ type cacheCfg struct {
 	initialised bool
 	redis       redisCfg
 }
+
+type s3Cfg struct {
+	cfg        *aws.Config
+	bucketName string
+}
+
+type cloudCfg struct {
+	s3 s3Cfg
+}
 type config struct {
 	appName  string
 	addr     string
 	dbConfig dbConfig
 	env      string
+	cloud    cloudCfg
 	auth     authConfig
 	cacheCfg cacheCfg
 }

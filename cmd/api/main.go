@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/9thDuck/chat_go.git/internal/auth"
+	cloudStorage "github.com/9thDuck/chat_go.git/internal/cloud_storage"
 	"github.com/9thDuck/chat_go.git/internal/db"
 	"github.com/9thDuck/chat_go.git/internal/env"
 	"github.com/9thDuck/chat_go.git/internal/store"
@@ -41,6 +42,13 @@ func main() {
 
 	}
 
+	currentEnv := env.GetEnvString("ENV", "development")
+	isProduction := currentEnv == "production"
+	bucketName := env.GetEnvString("DEV_BUCKET_NAME", "")
+	if isProduction {
+		bucketName = env.GetEnvString("PROD_BUCKET_NAME", "")
+	}
+
 	conf :=
 		config{
 			addr: fmt.Sprintf(":%d", env.GetEnvInt("PORT", 8080)),
@@ -60,6 +68,7 @@ func main() {
 						Refresh: time.Duration(env.GetEnvInt("JWT_REFRESH_TOKEN_EXPIRY_IN_DAYS", 7)) * time.Hour * 24,
 					}},
 			},
+			env:     env.GetEnvString("ENV", "development"),
 			appName: env.GetEnvString("APP_NAME", "DuckChat"),
 			cacheCfg: cacheCfg{
 				redis: redisCfg{
@@ -67,6 +76,18 @@ func main() {
 					addr:    env.GetEnvString("REDIS_ADDR", "localhost:6379"),
 					db:      env.GetEnvInt("REDIS_DB", 0),
 					pw:      env.GetEnvString("REDIS_PW", ""),
+				},
+			},
+			cloud: cloudCfg{
+				s3: s3Cfg{
+					cfg: cloudStorage.NewAWSConfig(
+						env.GetEnvString("AWS_REGION", ""),
+						cloudStorage.NewAWSCredentialsProvider(
+							env.GetEnvString("AWS_ACCESS_KEY_ID", ""),
+							env.GetEnvString("AWS_SECRET_ACCESS_KEY", ""),
+						),
+					),
+					bucketName: bucketName,
 				},
 			},
 		}
@@ -94,6 +115,8 @@ func main() {
 	store := store.NewStorage(dbConn)
 
 	logger := zap.Must(zap.NewProduction()).Sugar()
+	defer logger.Sync()
+
 	var cacheStore cache.Storage
 	if conf.cacheCfg.redis.enabled {
 		rdb := cache.NewRedisClient(
@@ -109,13 +132,16 @@ func main() {
 		}
 	}
 
-	defer logger.Sync()
+	cloudStorage := cloudStorage.NewS3CloudStorage(
+		conf.cloud.s3.cfg,
+	)
 	app := &application{
 		config:        conf,
 		store:         store,
 		logger:        logger,
 		authenticator: jwtAuthenticator,
 		cache:         cacheStore,
+		cloud:         cloudStorage,
 	}
 
 	mux := app.mount()
