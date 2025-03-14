@@ -145,6 +145,7 @@ func (app *application) NewAuthCookie(name, tokenString string, exp time.Duratio
 		Value:    tokenString,
 		Path:     "/",
 		MaxAge:   int(exp),
+		SameSite: http.SameSiteLaxMode,
 		Secure:   secure,
 		HttpOnly: true,
 	}
