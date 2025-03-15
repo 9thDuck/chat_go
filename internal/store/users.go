@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/lib/pq"
@@ -55,7 +54,6 @@ func (u *User) ValidateCredentials(password string) bool {
 func (s *UsersStore) Create(ctx context.Context, user *User) error {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
-	fmt.Println(user)
 	query := `WITH inserted_user AS (
 			INSERT INTO users (
 				username,

@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	"github.com/lib/pq"
 )
@@ -179,7 +178,7 @@ func (s *ContactRequestsStore) Delete(ctx context.Context, senderID, receiverID 
 	if err != nil {
 		switch err {
 		case sql.ErrNoRows:
-				return ErrContactRequestNotFound
+			return ErrContactRequestNotFound
 		default:
 			return err
 		}

@@ -20,6 +20,7 @@ type Storage struct {
 
 	Contacts interface {
 		Get(ctx context.Context, userID int64, pagination *Pagination) (*[]Contact, int, error)
+		GetContactExists(ctx context.Context, userID, contactID int64) (bool, error)
 		Delete(ctx context.Context, userID, contactID int64) error
 	}
 
@@ -30,6 +31,11 @@ type Storage struct {
 		Reject(ctx context.Context, senderID, receiverID int64) error
 		Delete(ctx context.Context, senderID, receiverID int64) error
 	}
+
+	Messages interface {
+		Get(ctx context.Context, userID int64, pagination *Pagination) (*[]Message, int, error)
+		Create(ctx context.Context, message *Message) error
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
@@ -38,6 +44,7 @@ func NewStorage(db *sql.DB) Storage {
 		Roles:           &RolesStore{db},
 		Contacts:        &ContactsStore{db},
 		ContactRequests: &ContactRequestsStore{db},
+		Messages:        &MessagesStore{db},
 	}
 }
 

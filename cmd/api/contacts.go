@@ -25,6 +25,12 @@ func (app *application) deleteContactHandler(w http.ResponseWriter, r *http.Requ
 	err := app.store.Contacts.Delete(r.Context(), user.ID, contactID)
 	switch err {
 	case nil:
+		if app.config.cacheCfg.initialised {
+			err = app.cache.Contacts.DeleteContactExists(r.Context(), user.ID, contactID)
+			if err != nil {
+				app.logger.Errorw("Failed to delete contact from cache", "error", err)
+			}
+		}
 		w.WriteHeader(http.StatusNoContent)
 		return
 	case store.ErrContactNotFound:

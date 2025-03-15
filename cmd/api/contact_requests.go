@@ -35,8 +35,8 @@ func (app *application) createContactRequestHandler(w http.ResponseWriter, r *ht
 		w.WriteHeader(http.StatusCreated)
 		return
 	case store.ErrContactRequestAlreadyExists:
-			app.badRequestError(w, r, err, "")
-			return
+		app.badRequestError(w, r, err, "")
+		return
 	case store.ErrContactRequestForeignKeyViolation:
 		app.notFoundError(w, r, err, "")
 		return
@@ -62,6 +62,12 @@ func (app *application) updateContactRequestHandler(w http.ResponseWriter, r *ht
 	switch operation {
 	case "accept":
 		err = app.store.ContactRequests.Accept(r.Context(), contactID, user.ID)
+		if err == nil && app.config.cacheCfg.initialised {
+			err = app.cache.Contacts.SetContactExists(r.Context(), user.ID, contactID, true)
+			if err != nil {
+				app.logger.Errorw("Failed to update contacts cache", "error", err)
+			}
+		}
 	case "reject":
 		err = app.store.ContactRequests.Reject(r.Context(), contactID, user.ID)
 	}

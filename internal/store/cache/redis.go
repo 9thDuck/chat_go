@@ -12,7 +12,8 @@ func NewRedisClient(addr, pw string, db int) *redis.Client {
 
 func NewRedisStorage(rdb *redis.Client) Storage {
 	return Storage{
-		Users: &UsersStore{db: rdb},
-		Misc:  &MiscStore{db: rdb},
+		Users:    &UsersStore{db: rdb},
+		Contacts: &ContactsStore{db: rdb},
+		Misc:     &MiscStore{db: rdb},
 	}
 }

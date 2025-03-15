@@ -132,7 +132,7 @@ func main() {
 		}
 	}
 
-	cloudStorage := cloudStorage.NewS3CloudStorage(
+	cloudStorageClient := cloudStorage.NewS3CloudStorage(
 		conf.cloud.s3.cfg,
 	)
 	app := &application{
@@ -140,10 +140,12 @@ func main() {
 		store:         store,
 		logger:        logger,
 		authenticator: jwtAuthenticator,
-		cache:         cacheStore,
-		cloud:         cloudStorage,
+		cloud:         cloudStorageClient,
 	}
 
+	if conf.cacheCfg.redis.enabled {
+		app.cache = cacheStore
+	}
 	mux := app.mount()
 
 	log.Fatal(app.run(mux))

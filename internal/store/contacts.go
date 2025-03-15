@@ -51,6 +51,26 @@ func (s *ContactsStore) Get(ctx context.Context, userID int64, pagination *Pagin
 	return &contacts, total, nil
 }
 
+func (s *ContactsStore) GetContactExists(ctx context.Context, userID, contactID int64) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM contacts 
+			WHERE (user_id = $1 AND contact_id = $2) 
+			OR (user_id = $2 AND contact_id = $1)
+		)`
+
+	var exists bool
+	err := s.db.QueryRowContext(ctx, query, userID, contactID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 func (s *ContactsStore) Delete(ctx context.Context, userID, contactID int64) error {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()

@@ -213,7 +213,6 @@ func getUserIDFromToken(token *jwt.Token) (int64, error) {
 func (app *application) getUserIDParamMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		idParam := chi.URLParam(r, string(userIDCtxKey))
-		fmt.Println(idParam, len(idParam))
 
 		id, err := strconv.ParseInt(idParam, 10, 64)
 
@@ -314,4 +313,84 @@ func (app *application) blockSelfContactRequestMiddleware(next http.Handler) htt
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (app *application) getReceiverIDParamMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receiverID := chi.URLParam(r, "receiverID")
+		if receiverID == "" {
+			app.badRequestError(w, r, nil, "receiver_id is required to send message")
+			return
+		}
+		receiverIDInt, err := strconv.ParseInt(receiverID, 10, 64)
+		if err != nil {
+			app.badRequestError(w, r, err, "")
+			return
+		}
+		ctx := context.WithValue(r.Context(), receiverIDCtxKey, receiverIDInt)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (app *application) preMessageCreationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		const payloadValidationErrMsg = "content must be between 1 and 1000 characters, attachments must be an array of strings not more than 10 elements, each string must be less than 255 characters"
+
+		var payload createMessagePayload
+		if err := readJson(w, r, &payload); err != nil {
+			app.badRequestError(w, r, err, payloadValidationErrMsg)
+			return
+		}
+		if err := Validate.Struct(&payload); err != nil {
+			app.badRequestError(w, r, err, payloadValidationErrMsg)
+			return
+		}
+		user := getUserFromCtx(r)
+		receiverID := getReceiverIDFromCtx(r)
+		areContacts, err := app.checkContactRelationship(r.Context(), user.ID, receiverID)
+		if err != nil {
+			app.internalError(w, r, err)
+			return
+		}
+
+		if !areContacts {
+			app.badRequestError(w, r, nil, "You can only send messages to users in your contacts list")
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), messageCreationPayloadCtxKey, &payload)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (app *application) checkContactRelationship(ctx context.Context, userID, contactID int64) (bool, error) {
+	if app.config.cacheCfg.initialised {
+		areContacts, err := app.cache.Contacts.GetContactExists(ctx, userID, contactID)
+		if err != nil {
+			return false, err
+		}
+		if areContacts {
+			app.logger.Infow("Cache:Contacts hit", "userID", userID, "contactID", contactID)
+			return true, nil
+		}
+		app.logger.Infow("Cache:Contacts miss", "userID", userID, "contactID", contactID)
+	}
+
+	areContacts, err := app.store.Contacts.GetContactExists(ctx, userID, contactID)
+	if err != nil {
+		return false, err
+	}
+	if app.config.cacheCfg.initialised {
+		err = app.cache.Contacts.SetContactExists(ctx, userID, contactID, areContacts)
+		if err != nil {
+			app.logger.Errorw("Failed to update contacts cache", "error", err)
+		}
+	}
+
+	return areContacts, nil
 }

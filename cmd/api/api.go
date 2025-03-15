@@ -70,6 +70,15 @@ func (app *application) mount() http.Handler {
 			})
 		})
 
+		r.Route("/messages", func(r chi.Router) {
+			r.Use(app.ValidateTokenMiddleware())
+			r.With(app.paginationMiddleware).Get("/", app.getMessagesHandler)
+			r.Route("/{receiverID}", func(r chi.Router) {
+				r.Use(app.getReceiverIDParamMiddleware)
+				r.With(app.preMessageCreationMiddleware).Post("/", app.createMessageHandler)
+			})
+		})
+
 		r.Route("/cloud", func(r chi.Router) {
 			r.Use(app.ValidateTokenMiddleware())
 			r.Route("/presignedurl", func(r chi.Router) {
