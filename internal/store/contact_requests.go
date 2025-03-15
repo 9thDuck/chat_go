@@ -171,16 +171,18 @@ func (s *ContactRequestsStore) Delete(ctx context.Context, senderID, receiverID 
 
 	query := `
 		DELETE FROM contact_requests
-		WHERE sender_id = $1 AND receiver_id = $2`
+		WHERE sender_id = $1 AND receiver_id = $2 AND status = 'pending'
+		RETURNING sender_id;`
 
-	_, err := s.db.ExecContext(ctx, query, senderID, receiverID)
+	var returnedSenderID int64
+	err := s.db.QueryRowContext(ctx, query, senderID, receiverID).Scan(&returnedSenderID)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			if errors.Is(pqErr, sql.ErrNoRows) {
+		switch err {
+		case sql.ErrNoRows:
 				return ErrContactRequestNotFound
-			}
+		default:
+			return err
 		}
-		return err
 	}
 
 	return nil

@@ -91,7 +91,7 @@ func (app *application) deleteContactRequestHandler(w http.ResponseWriter, r *ht
 	case nil:
 		w.WriteHeader(http.StatusNoContent)
 	case store.ErrContactRequestNotFound:
-		app.notFoundError(w, r, err, "contact request not found")
+		app.notFoundError(w, r, err, "")
 		return
 	default:
 		app.internalError(w, r, err)
