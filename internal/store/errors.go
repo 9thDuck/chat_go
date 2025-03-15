@@ -22,9 +22,9 @@ const (
 	DefaultDuplicateUsernameErrMsg = "user with given username already exists"
 
 	// contact requests
-	DefaultContactRequestAlreadyExistsErrMsg = "either contact request or contact already exists or the most recent request was rejected. If the most recent request was rejected, you can ask the user you want to add to send you a contact request"
-	DefaultContactRequestNotFoundErrMsg      = "contact request not found"
-
+	DefaultContactRequestAlreadyExistsErrMsg       = "either contact request or contact already exists or the most recent request was rejected. If the most recent request was rejected, you can ask the user you want to add to send you a contact request"
+	DefaultContactRequestNotFoundErrMsg            = "contact request not found"
+	DefaultContactRequestForeignKeyViolationErrMsg = "user you're attempting send a contact request to does not exist"
 	// contacts
 	DefaultContactAlreadyExistsErrMsg = "contact already exists"
 	DefaultContactNotFoundErrMsg      = "contact not found"
@@ -47,9 +47,9 @@ var (
 	ErrDuplicateUsername = errors.New(DefaultDuplicateUsernameErrMsg)
 
 	// contact requests
-	ErrContactRequestAlreadyExists = errors.New(DefaultContactRequestAlreadyExistsErrMsg)
-	ErrContactRequestNotFound      = errors.New(DefaultContactRequestNotFoundErrMsg)
-
+	ErrContactRequestAlreadyExists       = errors.New(DefaultContactRequestAlreadyExistsErrMsg)
+	ErrContactRequestNotFound            = errors.New(DefaultContactRequestNotFoundErrMsg)
+	ErrContactRequestForeignKeyViolation = errors.New(DefaultContactRequestForeignKeyViolationErrMsg)
 	// contacts
 	ErrContactAlreadyExists = errors.New(DefaultContactAlreadyExistsErrMsg)
 	ErrContactNotFound      = errors.New(DefaultContactNotFoundErrMsg)

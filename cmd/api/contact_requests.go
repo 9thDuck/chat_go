@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/9thDuck/chat_go.git/internal/store"
@@ -30,11 +29,18 @@ func (app *application) createContactRequestHandler(w http.ResponseWriter, r *ht
 
 	contactID := getContactIDFromCtx(r)
 
-	if err := app.store.ContactRequests.Create(r.Context(), user.ID, contactID); err != nil {
-		if errors.Is(err, store.ErrContactRequestAlreadyExists) {
+	err := app.store.ContactRequests.Create(r.Context(), user.ID, contactID)
+	switch err {
+	case nil:
+		w.WriteHeader(http.StatusCreated)
+		return
+	case store.ErrContactRequestAlreadyExists:
 			app.badRequestError(w, r, err, "")
 			return
-		}
+	case store.ErrContactRequestForeignKeyViolation:
+		app.notFoundError(w, r, err, "")
+		return
+	default:
 		app.internalError(w, r, err)
 		return
 	}

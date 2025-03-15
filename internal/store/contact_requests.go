@@ -49,8 +49,13 @@ func (s *ContactRequestsStore) Create(ctx context.Context, senderID, receiverID 
 			return ErrContactRequestAlreadyExists
 		}
 		if pqErr, ok := err.(*pq.Error); ok {
-			if pqErr.Code == PQ_CODE_UNIQUE_CONSTRAINT_VIOLATION {
+			switch pqErr.Code {
+			case PQ_CODE_UNIQUE_CONSTRAINT_VIOLATION:
 				return ErrContactRequestAlreadyExists
+			case PQ_CODE_FOREIGN_KEY_CONSTRAINT_VIOLATION:
+				return ErrContactRequestForeignKeyViolation
+			default:
+				return err
 			}
 		}
 		return err
