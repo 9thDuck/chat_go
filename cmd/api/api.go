@@ -50,6 +50,26 @@ func (app *application) mount() http.Handler {
 			})
 		})
 
+		r.Route("/contacts", func(r chi.Router) {
+			r.Use(app.ValidateTokenMiddleware())
+			r.With(app.paginationMiddleware).Get("/", app.getContactsHandler)
+			r.Route("/{contactID}", func(r chi.Router) {
+				r.Use(app.getContactIDParamMiddleware)
+				r.Delete("/", app.deleteContactHandler)
+			})
+			// requests
+			r.Route("/requests", func(r chi.Router) {
+				r.With(app.paginationMiddleware).Get("/", app.getContactRequestByIDHandler)
+				r.Route("/{contactID}", func(r chi.Router) {
+					r.Use(app.getContactIDParamMiddleware)
+					r.Use(app.blockSelfContactRequestMiddleware)
+					r.Post("/", app.createContactRequestHandler)
+					r.Patch("/", app.updateContactRequestHandler)
+					r.Delete("/", app.deleteContactRequestHandler)
+				})
+			})
+		})
+
 		r.Route("/cloud", func(r chi.Router) {
 			r.Use(app.ValidateTokenMiddleware())
 			r.Route("/presignedurl", func(r chi.Router) {

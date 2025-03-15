@@ -226,3 +226,92 @@ func (app *application) getUserIDParamMiddleware(next http.Handler) http.Handler
 		next.ServeHTTP(w, r.WithContext(ctxWithValue))
 	})
 }
+
+func (app *application) paginationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limit := 10
+		page := 1
+		sort := "created_at"
+		sortDirection := "DESC"
+
+		query := r.URL.Query()
+
+		limitQParam := query.Get("limit")
+		if limitQParam != "" {
+			val, err := strconv.Atoi(limitQParam)
+			if err != nil {
+				app.badRequestError(w, r, nil, "limit query param must be number greater than 0 and less than equal to 10")
+				return
+			} else if limit < 1 || limit > 10 {
+				app.badRequestError(w, r, nil, "limit query param must be number greater than 0 and less than equal to 10")
+				return
+			}
+			limit = val
+		}
+
+		pageQParam := query.Get("page")
+		if pageQParam != "" {
+			val, err := strconv.Atoi(pageQParam)
+			if err != nil {
+				app.badRequestError(w, r, nil, "page query param must be a number greater than 0")
+				return
+			}
+			page = val
+		}
+
+		sortQParam := query.Get("sort")
+		if sortQParam != "" {
+			if sortQParam != "first_name" && sortQParam != "last_name" && sortQParam != "username" {
+				app.badRequestError(w, r, nil, "sort query param must be one of the following: first_name, last_name, username")
+				return
+			}
+			sort = sortQParam
+		}
+
+		sortDirectionQParam := query.Get("sort_direction")
+		if sortDirectionQParam != "" {
+			if sortDirectionQParam != "ASC" && sortDirectionQParam != "DESC" {
+				app.badRequestError(w, r, nil, "sort_direction query param must be one of the following: ASC, DESC")
+				return
+			}
+			sortDirection = sortDirectionQParam
+		}
+
+		pagination := &store.Pagination{
+			Limit:         limit,
+			Page:          page,
+			Sort:          sort,
+			SortDirection: sortDirection,
+		}
+
+		ctx := context.WithValue(r.Context(), paginationCtxKey, pagination)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (app *application) getContactIDParamMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		contactID := chi.URLParam(r, "contactID")
+		contactIDInt, err := strconv.ParseInt(contactID, 10, 64)
+		if err != nil {
+			app.badRequestError(w, r, err, "")
+			return
+		}
+		ctx := context.WithValue(r.Context(), contactIDCtxKey, contactIDInt)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (app *application) blockSelfContactRequestMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := getUserFromCtx(r)
+		contactID := getContactIDFromCtx(r)
+
+		if user.ID == contactID {
+			app.badRequestError(w, r, nil, "invalid contact_id parameter, contact_id cannot be your own id")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

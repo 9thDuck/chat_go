@@ -11,6 +11,11 @@ type dataEnvelope struct {
 	Data any `json:"data"`
 }
 
+type paginatedEnvelope struct {
+	Records      any `json:"records"`
+	TotalRecords int `json:"total_records"`
+}
+
 type errorEnvelope struct {
 	Error string `json:"error"`
 }

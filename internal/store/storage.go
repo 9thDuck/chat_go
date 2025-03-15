@@ -17,10 +17,47 @@ type Storage struct {
 	Roles interface {
 		GetByName(ctx context.Context, roleName string) (*Role, error)
 	}
+
+	Contacts interface {
+		Get(ctx context.Context, userID int64, pagination *Pagination) (*[]Contact, int, error)
+		Delete(ctx context.Context, userID, contactID int64) error
+	}
+
+	ContactRequests interface {
+		Create(ctx context.Context, senderID, receiverID int64) error
+		Get(ctx context.Context, senderID int64, pagination *Pagination) (*[]ContactRequest, int, error)
+		Accept(ctx context.Context, senderID, receiverID int64) error
+		Reject(ctx context.Context, senderID, receiverID int64) error
+		Delete(ctx context.Context, senderID, receiverID int64) error
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
-	return Storage{Users: &UsersStore{db}}
+	return Storage{
+		Users:           &UsersStore{db},
+		Roles:           &RolesStore{db},
+		Contacts:        &ContactsStore{db},
+		ContactRequests: &ContactRequestsStore{db},
+	}
 }
 
 var QueryTimeout = time.Second * 5
+
+type WithTxFn func(*sql.Tx) error
+
+func withTx(ctx context.Context, db *sql.DB, fn WithTxFn) error {
+	tx, err := db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return err
+	}
+
+	if err := fn(tx); err != nil {
+		if err := tx.Rollback(); err != nil {
+			return err
+		}
+		return err
+	}
+
+	return tx.Commit()
+}
