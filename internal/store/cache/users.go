@@ -12,10 +12,9 @@ import (
 )
 
 type UsersStore struct {
-	db *redis.Client
+	db     *redis.Client
+	expiry time.Duration
 }
-
-const UserExpTime time.Duration = 5 * time.Hour
 
 func (s *UsersStore) Get(ctx context.Context, userID int64) (*store.User, error) {
 	cacheKey := fmt.Sprintf("user-%d", userID)
@@ -50,7 +49,7 @@ func (s *UsersStore) Set(ctx context.Context, user *store.User) error {
 		return err
 	}
 
-	return s.db.SetEX(ctx, cacheKey, json, UserExpTime).Err()
+	return s.db.SetEX(ctx, cacheKey, json, s.expiry).Err()
 }
 
 func (s *UsersStore) Delete(ctx context.Context, userID int64) error {

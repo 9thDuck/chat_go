@@ -9,10 +9,9 @@ import (
 )
 
 type ContactsStore struct {
-	db *redis.Client
+	db     *redis.Client
+	expiry time.Duration
 }
-
-const ContactExpTime time.Duration = 24 * time.Hour
 
 func (s *ContactsStore) GetContactExists(ctx context.Context, userID, contactID int64) (bool, error) {
 	minID, maxID := min(userID, contactID), max(userID, contactID)
@@ -37,7 +36,7 @@ func (s *ContactsStore) SetContactExists(ctx context.Context, userID, contactID 
 		val = "1"
 	}
 
-	return s.db.SetEX(ctx, cacheKey, val, ContactExpTime).Err()
+	return s.db.SetEX(ctx, cacheKey, val, s.expiry).Err()
 }
 
 func (s *ContactsStore) DeleteContactExists(ctx context.Context, userID, contactID int64) error {

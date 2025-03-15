@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/9thDuck/chat_go.git/internal/auth"
+	"github.com/9thDuck/chat_go.git/internal/store/cache"
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
@@ -31,6 +32,7 @@ type redisCfg struct {
 type cacheCfg struct {
 	initialised bool
 	redis       redisCfg
+	expiry      *cache.ExpiryTimes
 }
 
 type s3Cfg struct {

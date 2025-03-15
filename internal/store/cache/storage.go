@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"time"
 
 	"github.com/9thDuck/chat_go.git/internal/store"
 )
@@ -20,4 +21,8 @@ type Storage struct {
 	Misc interface {
 		Close() error
 	}
+}
+type ExpiryTimes struct {
+	Users    time.Duration
+	Contacts time.Duration
 }

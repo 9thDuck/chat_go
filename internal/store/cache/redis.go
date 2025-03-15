@@ -10,10 +10,10 @@ func NewRedisClient(addr, pw string, db int) *redis.Client {
 	})
 }
 
-func NewRedisStorage(rdb *redis.Client) Storage {
+func NewRedisStorage(rdb *redis.Client, expiry *ExpiryTimes) Storage {
 	return Storage{
-		Users:    &UsersStore{db: rdb},
-		Contacts: &ContactsStore{db: rdb},
+		Users:    &UsersStore{db: rdb, expiry: expiry.Users},
+		Contacts: &ContactsStore{db: rdb, expiry: expiry.Contacts},
 		Misc:     &MiscStore{db: rdb},
 	}
 }

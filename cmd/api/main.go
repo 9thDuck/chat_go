@@ -77,6 +77,10 @@ func main() {
 					db:      env.GetEnvInt("REDIS_DB", 0),
 					pw:      env.GetEnvString("REDIS_PW", ""),
 				},
+				expiry: &cache.ExpiryTimes{
+					Users:    time.Duration(env.GetEnvInt("CACHE_USERS_EXPIRY_HOURS", 5)) * time.Hour,
+					Contacts: time.Duration(env.GetEnvInt("CACHE_CONTACTS_EXPIRY_HOURS", 24)) * time.Hour,
+				},
 			},
 			cloud: cloudCfg{
 				s3: s3Cfg{
@@ -124,7 +128,7 @@ func main() {
 			conf.cacheCfg.redis.pw,
 			conf.cacheCfg.redis.db,
 		)
-		cacheStore = cache.NewRedisStorage(rdb)
+		cacheStore = cache.NewRedisStorage(rdb, conf.cacheCfg.expiry)
 		msg, err := rdb.Ping(context.Background()).Result()
 		if err == nil {
 			logger.Infow("cache:redis initiased", "pinged redis", fmt.Sprintf("redis said %s", msg))
