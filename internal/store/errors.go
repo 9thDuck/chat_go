@@ -19,7 +19,7 @@ const (
 
 	// users
 	DefaultDuplicateMailErrMsg     = "user with given email already exist"
-	DefaultDuplicateUsernameErrMsg = "user with given username already exists"
+	DefaultDuplicateUsernameErrMsg = "username is already taken"
 
 	// contact requests
 	DefaultContactRequestAlreadyExistsErrMsg       = "either contact request or contact already exists or the most recent request was rejected. If the most recent request was rejected, you can ask the user you want to add to send you a contact request"
