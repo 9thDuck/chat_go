@@ -46,6 +46,13 @@ func (app *application) getUserByIDHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func(app *application) getAuthenticatedUserHandler(w http.ResponseWriter, r *http.Request) {
+	user:= getUserFromCtx(r)
+	if err:= app.jsonResponse(w,http.StatusOK, &user); err != nil {
+		app.internalError(w,r,err)
+		return
+	}
+}
 func (app *application) updateUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	var payload UpdateUserPayload
 	if err := readJson(w, r, &payload); err != nil {
