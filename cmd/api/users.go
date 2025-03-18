@@ -46,10 +46,10 @@ func (app *application) getUserByIDHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func(app *application) getAuthenticatedUserHandler(w http.ResponseWriter, r *http.Request) {
-	user:= getUserFromCtx(r)
-	if err:= app.jsonResponse(w,http.StatusOK, &user); err != nil {
-		app.internalError(w,r,err)
+func (app *application) getAuthenticatedUserHandler(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromCtx(r)
+	if err := app.jsonResponse(w, http.StatusOK, &user); err != nil {
+		app.internalError(w, r, err)
 		return
 	}
 }
@@ -78,10 +78,13 @@ func (app *application) updateUserByIDHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := app.cache.Users.Delete(ctx, user.ID); err != nil {
-		app.internalError(w, r, err)
-		return
+	if app.config.cacheCfg.initialised {
+		if err := app.cache.Users.Delete(ctx, user.ID); err != nil {
+			app.internalError(w, r, err)
+			return
+		}
 	}
+
 	if err := app.jsonResponse(w, http.StatusOK, &user); err != nil {
 		app.internalError(w, r, err)
 		return
