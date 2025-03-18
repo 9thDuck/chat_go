@@ -33,14 +33,14 @@ func (app *application) mount() http.Handler {
 	handler.Use(middleware.RequestID)
 	handler.Use(middleware.Recoverer)
 	handler.Use(cors.Handler(cors.Options{
-		  // AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
-		  AllowedOrigins:   []string{"https://*", "http://*"},
-		  // AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
-		  AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		  AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		  ExposedHeaders:   []string{"Link"},
-		  AllowCredentials: true,
-		  MaxAge:           300, //
+		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
+		AllowedOrigins: []string{"https://*", "http://*"},
+		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300, //
 	}))
 
 	handler.Route("/v1", func(r chi.Router) {
