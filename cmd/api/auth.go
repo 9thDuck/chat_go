@@ -15,6 +15,7 @@ type SignupPayload struct {
 	Username string `json:"username" validate:"required,min=8,max=30"`
 	Email    string `json:"email" validate:"email,required,max=150"`
 	Password string `json:"password" validate:"required,min=8,max=20"`
+	PublicKey string `json:"public_key" validate:"required,min=10,max=70"`
 }
 
 type LoginPayload struct {
@@ -36,8 +37,9 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	user := store.User{
-		Username: payload.Username,
-		Email:    payload.Email,
+		Username:  payload.Username,
+		Email:     payload.Email,
+		PublicKey: payload.PublicKey,
 		Role: &store.Role{
 			Name: "user",
 		},

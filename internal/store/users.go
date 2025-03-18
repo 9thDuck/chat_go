@@ -19,6 +19,7 @@ type User struct {
 	Username       string `json:"username"`
 	Email          string `json:"email"`
 	HashedPassword string `json:"-"`
+	PublicKey      string `json:"public_key"`
 	FirstName      string `json:"first_name"`
 	LastName       string `json:"last_name"`
 	ProfilePic     string `json:"profile_pic"`
@@ -28,12 +29,13 @@ type User struct {
 	UpdatedAt      string `json:"updated_at"`
 }
 
-func NewUser(username, email, firstName, lastName string) (user *User) {
+func NewUser(username, email, firstName, lastName, publicKey string) (user *User) {
 	return &User{
 		Username:  username,
 		Email:     email,
 		FirstName: firstName,
 		LastName:  lastName,
+		PublicKey: publicKey,
 	}
 }
 
@@ -62,12 +64,14 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 				first_name,
 				last_name,
 				profile_pic,
-				role_id
+				role_id,
+				public_key
 			)
 			VALUES ($1, $2, $3, $4, $5, $6,
-				(SELECT r.id FROM roles r WHERE r.name = $7)
+				(SELECT r.id FROM roles r WHERE r.name = $7),
+				$8
 			)
-			RETURNING id, role_id, created_at, updated_at
+			RETURNING id, role_id, created_at, updated_at, public_key
 		)
 		SELECT 
 			iu.id, 
@@ -76,7 +80,8 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 			r.level, 
 			r.description,
 			iu.created_at, 
-			iu.updated_at
+			iu.updated_at,
+			iu.public_key
 		FROM inserted_user iu
 		JOIN roles r ON r.id = iu.role_id;`
 
@@ -90,6 +95,7 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 		user.LastName,
 		user.ProfilePic,
 		user.Role.Name,
+		user.PublicKey,
 	).Scan(
 		&user.ID,
 		&user.RoleID,
@@ -98,6 +104,7 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 		&user.Role.Description,
 		&user.CreatedAt,
 		&user.UpdatedAt,
+		&user.PublicKey,
 	)
 
 	if err != nil {
@@ -122,7 +129,7 @@ func (s *UsersStore) GetByID(ctx context.Context, user *User) error {
 	defer cancel()
 	query := `
 		SELECT 
-		u.username, u.email, u.hashed_password, u.first_name, u.last_name, u.role_id, u.created_at, u.updated_at,
+		u.username, u.email, u.hashed_password, u.first_name, u.last_name, u.public_key, u.role_id, u.created_at, u.updated_at,
 		r.id, r.name, r.level, r.description
 		FROM 
 		users u JOIN roles r ON u.role_id = r.id
@@ -138,6 +145,7 @@ func (s *UsersStore) GetByID(ctx context.Context, user *User) error {
 		&user.HashedPassword,
 		&user.FirstName,
 		&user.LastName,
+		&user.PublicKey,
 		&user.RoleID,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -163,7 +171,7 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 
 	query :=
 		`SELECT
-		 u.id, u.username, u.hashed_password, u.first_name, u.last_name, u.role_id, u.created_at, u.updated_at,
+		 u.id, u.username, u.hashed_password, u.first_name, u.last_name, u.public_key, u.role_id, u.created_at, u.updated_at,
 		 r.id, r.name, r.description, r.level
 		 FROM users u JOIN roles r ON r.id = u.role_id
 		 WHERE u.email = $1`
@@ -183,6 +191,7 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 		&user.HashedPassword,
 		&user.FirstName,
 		&user.LastName,
+		&user.PublicKey,
 		&user.RoleID,
 		&user.CreatedAt,
 		&user.UpdatedAt,
