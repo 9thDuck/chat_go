@@ -8,6 +8,10 @@ import (
 
 const contactIDCtxKey ctxKey = "contactID"
 
+type CreateContactRequestRequest struct {
+	Message string `json:"message" validate:"required,min=0,max=100"`
+}
+
 func (app *application) getContactRequestByIDHandler(w http.ResponseWriter, r *http.Request) {
 	user := getUserFromCtx(r)
 
@@ -26,25 +30,44 @@ func (app *application) getContactRequestByIDHandler(w http.ResponseWriter, r *h
 
 func (app *application) createContactRequestHandler(w http.ResponseWriter, r *http.Request) {
 	user := getUserFromCtx(r)
-
+	
 	contactID := getContactIDFromCtx(r)
+
+	var payload CreateContactRequestRequest
+	if err := readJson(w, r, &payload); err != nil {
+		app.badRequestError(w, r, err, "")
+		return
+	}
+	
+	if err := Validate.Struct(payload); err != nil {
+		app.badRequestError(w, r, err, "")
+		return
+	}
 
 	err := app.store.ContactRequests.Create(r.Context(), user.ID, contactID)
 	switch err {
-	case nil:
-		w.WriteHeader(http.StatusCreated)
-		return
 	case store.ErrContactRequestAlreadyExists:
 		app.badRequestError(w, r, err, "")
 		return
 	case store.ErrContactRequestForeignKeyViolation:
 		app.notFoundError(w, r, err, "")
 		return
+	}
+
+	err = app.store.Messages.Create(r.Context(), &store.Message{
+		SenderID: user.ID,
+		ReceiverID: contactID,
+		Content: payload.Message,
+	})
+
+	switch err {
+	case nil:
+		app.jsonResponse(w, http.StatusNoContent, nil)
+		return
 	default:
 		app.internalError(w, r, err)
 		return
 	}
-
 }
 
 func (app *application) updateContactRequestHandler(w http.ResponseWriter, r *http.Request) {

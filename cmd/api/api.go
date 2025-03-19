@@ -65,6 +65,7 @@ func (app *application) mount() http.Handler {
 		r.Route("/contacts", func(r chi.Router) {
 			r.Use(app.ValidateTokenMiddleware())
 			r.With(app.paginationMiddleware).Get("/", app.getContactsHandler)
+			r.With(app.paginationMiddleware).Get("/search", app.searchContactsHandler)
 			r.Route("/{contactID}", func(r chi.Router) {
 				r.Use(app.getContactIDParamMiddleware)
 				r.Delete("/", app.deleteContactHandler)
