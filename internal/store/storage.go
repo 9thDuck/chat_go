@@ -19,7 +19,7 @@ type Storage struct {
 	}
 
 	Contacts interface {
-		Get(ctx context.Context, userID int64, pagination *Pagination) (*[]Contact, int, error)
+		Get(ctx context.Context, userID int64, pagination *Pagination) (*[]int64, int, error)
 		GetContactExists(ctx context.Context, userID, contactID int64) (bool, error)
 		Delete(ctx context.Context, userID, contactID int64) error
 	}
