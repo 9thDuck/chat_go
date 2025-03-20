@@ -79,16 +79,29 @@ func (s *ContactsStore) Delete(ctx context.Context, userID, contactID int64) err
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
 
-	query := `
-		DELETE FROM contacts
-		WHERE (user_id = $1 AND contact_id = $2) OR (user_id = $2 AND contact_id = $1)`
+	return withTx(ctx, s.db, func(tx *sql.Tx) error {
+		query := `
+			DELETE FROM contacts
+			WHERE (user_id = $1 AND contact_id = $2) OR (user_id = $2 AND contact_id = $1)`
 
-	_, err := s.db.ExecContext(ctx, query, userID, contactID)
-	if err != nil {
-		return err
-	}
+		_, err := tx.ExecContext(ctx, query, userID, contactID)
+		if err != nil {
+			return err
+		}
 
-	return nil
+		// Delete any existing contact requests between these users
+		query = `
+			DELETE FROM contact_requests
+			WHERE (sender_id = $1 AND receiver_id = $2) 
+			   OR (sender_id = $2 AND receiver_id = $1)`
+
+		_, err = tx.ExecContext(ctx, query, userID, contactID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func createContact(ctx context.Context, tx *sql.Tx, userID, contactID int64) error {
