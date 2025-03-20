@@ -260,8 +260,8 @@ func (app *application) paginationMiddleware(next http.Handler) http.Handler {
 
 		sortQParam := query.Get("sort")
 		if sortQParam != "" {
-			if sortQParam != "first_name" && sortQParam != "last_name" && sortQParam != "username" {
-				app.badRequestError(w, r, nil, "sort query param must be one of the following: first_name, last_name, username")
+			if sortQParam != "first_name" && sortQParam != "last_name" && sortQParam != "username" && sortQParam != "created_at" {
+				app.badRequestError(w, r, nil, "sort query param must be one of the following: first_name, last_name, username, created_at")
 				return
 			}
 			sort = sortQParam
