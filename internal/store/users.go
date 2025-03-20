@@ -15,9 +15,11 @@ type UsersStore struct {
 }
 
 type UserDataForAddContact struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	PublicKey string `json:"public_key"`
+	ID              int64  `json:"id"`
+	Username        string `json:"username"`
+	PublicKey       string `json:"public_key"`
+	IsContact       bool   `json:"is_contact"`
+	HasPendingRequest bool `json:"has_pending_request"`
 }
 
 type User struct {
@@ -242,21 +244,50 @@ func (s *UsersStore) Search(ctx context.Context, userID int64, searchTerm string
 	defer cancel()
 	
 	query := `
-		SELECT id, username, public_key, COUNT(*) OVER() AS total_count
-		FROM users
-		WHERE username ILIKE $1
-		AND id != $2
-		ORDER BY username
+		WITH contact_status AS (
+			SELECT contact_id as id, true as is_contact
+			FROM contacts
+			WHERE user_id = $1
+			UNION
+			SELECT user_id as id, true as is_contact
+			FROM contacts
+			WHERE contact_id = $1
+		),
+		pending_requests AS (
+			SELECT receiver_id as id, true as has_pending_request
+			FROM contact_requests
+			WHERE sender_id = $1 AND status = 'pending'
+			UNION
+			SELECT sender_id as id, true as has_pending_request
+			FROM contact_requests
+			WHERE receiver_id = $1 AND status = 'pending'
+		)
+		SELECT 
+			u.id, 
+			u.username, 
+			u.public_key,
+			COALESCE(cs.is_contact, false) as is_contact,
+			COALESCE(pr.has_pending_request, false) as has_pending_request,
+			COUNT(*) OVER() AS total_count
+		FROM users u
+		LEFT JOIN contact_status cs ON cs.id = u.id
+		LEFT JOIN pending_requests pr ON pr.id = u.id
+		WHERE u.username ILIKE $2
+		AND u.id != $1
+		ORDER BY 
+			cs.is_contact DESC NULLS LAST,
+			pr.has_pending_request DESC NULLS LAST,
+			u.username ASC
 		LIMIT $3 OFFSET $4
 	`
 
 	searchPattern := "%" + searchTerm + "%"
 
-	rows, err:= s.db.QueryContext(
+	rows, err := s.db.QueryContext(
 		ctx, 
 		query, 
-		searchPattern, 
 		userID, 
+		searchPattern, 
 		pagination.Limit, 
 		pagination.CalculateOffset(),
 	)
@@ -265,17 +296,24 @@ func (s *UsersStore) Search(ctx context.Context, userID int64, searchTerm string
 	}
 	defer rows.Close()
 	
-	totalCount:= 0
-	userDataForAddContactSlice:= make([]UserDataForAddContact, 0, pagination.Limit)
+	totalCount := 0
+	userDataForAddContactSlice := make([]UserDataForAddContact, 0, pagination.Limit)
 	for rows.Next() {
 		var userDataForAddContact UserDataForAddContact
-		if err:= rows.Scan(&userDataForAddContact.ID, &userDataForAddContact.Username, &userDataForAddContact.PublicKey, &totalCount); err != nil {
+		if err := rows.Scan(
+			&userDataForAddContact.ID,
+			&userDataForAddContact.Username,
+			&userDataForAddContact.PublicKey,
+			&userDataForAddContact.IsContact,
+			&userDataForAddContact.HasPendingRequest,
+			&totalCount,
+		); err != nil {
 			return nil, 0, err
 		}
 		userDataForAddContactSlice = append(userDataForAddContactSlice, userDataForAddContact)
 	}
 
-	if err:= rows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, 0, err
 	}
 
