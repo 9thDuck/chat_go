@@ -13,8 +13,10 @@ type ContactRequestsStore struct {
 
 type ContactRequest struct {
 	SenderID   int64  `json:"sender_id"`
-	ReceiverID int64  `json:"receiver_id"`
-	CreatedAt  string `json:"created_at"`
+	SenderUsername string `json:"sender_username"`
+	ReceiverID   int64  `json:"receiver_id"`
+	ReceiverUsername string `json:"receiver_username"`
+	CreatedAt    string `json:"created_at"`
 }
 
 func (s *ContactRequestsStore) Create(ctx context.Context, senderID, receiverID int64) error {
@@ -68,9 +70,11 @@ func (s *ContactRequestsStore) Get(ctx context.Context, senderID int64, paginati
 	defer cancel()
 
 	query := `
-		SELECT sender_id, receiver_id, created_at, COUNT(*) OVER() AS total
-		FROM contact_requests
-		WHERE sender_id = $1 OR receiver_id = $1 AND status = 'pending'
+		SELECT c.sender_id, c.receiver_id, c.created_at, u.username AS sender_username, u2.username AS receiver_username, COUNT(*) OVER() AS total
+		FROM contact_requests c 
+		JOIN users u ON c.sender_id = u.id
+		JOIN users u2 ON c.receiver_id = u2.id
+		WHERE (c.sender_id = $1 OR c.receiver_id = $1) AND c.status = 'pending'
 		ORDER BY ` + pagination.Sort + ` ` + pagination.SortDirection + `
 		LIMIT $2 OFFSET $3`
 
@@ -86,7 +90,14 @@ func (s *ContactRequestsStore) Get(ctx context.Context, senderID int64, paginati
 
 	for rows.Next() {
 		contactRequest := ContactRequest{}
-		err := rows.Scan(&contactRequest.SenderID, &contactRequest.ReceiverID, &contactRequest.CreatedAt, &total)
+		err := rows.Scan(
+			&contactRequest.SenderID, 
+			&contactRequest.ReceiverID, 
+			&contactRequest.CreatedAt, 
+			&contactRequest.SenderUsername, 
+			&contactRequest.ReceiverUsername, 
+			&total,
+		)
 		if err != nil {
 			return nil, 0, err
 		}
