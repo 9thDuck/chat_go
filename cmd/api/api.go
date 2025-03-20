@@ -55,9 +55,17 @@ func (app *application) mount() http.Handler {
 		r.Route("/users", func(r chi.Router) {
 			r.Use(app.ValidateTokenMiddleware())
 			r.Get("/", app.getAuthenticatedUserHandler)
+			
+			r.Route("/search", func(r chi.Router) {
+				r.With(app.paginationMiddleware).Get("/", app.searchUsersByUsernamesAndGetIDsHandler)
+				r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+					app.notFoundError(w, r, nil, "this api route is not valid")
+				})
+			})
+
+			// User ID specific routes
 			r.Route("/{userID}", func(r chi.Router) {
 				r.Use(app.getUserIDParamMiddleware)
-				r.Get("/", app.getUserByIDHandler)
 				r.Patch("/", app.userDetailsUpdateGuardMiddleware(app.updateUserByIDHandler))
 			})
 		})

@@ -12,6 +12,7 @@ type Storage struct {
 		GetByEmail(ctx context.Context, email string) (*User, error)
 		GetByID(ctx context.Context, userP *User) error
 		UpdateUserDataByID(ctx context.Context, user *User) error
+		Search(ctx context.Context, userID int64, searchTerm string, pagination *Pagination) (*[]UserDataForAddContact, int, error)
 	}
 
 	Roles interface {

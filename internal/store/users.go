@@ -14,6 +14,12 @@ type UsersStore struct {
 	db *sql.DB
 }
 
+type UserDataForAddContact struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	PublicKey string `json:"public_key"`
+}
+
 type User struct {
 	ID             int64  `json:"id"`
 	Username       string `json:"username"`
@@ -229,4 +235,49 @@ func (s *UsersStore) UpdateUserDataByID(ctx context.Context, user *User) error {
 		return err
 	}
 	return nil
+}
+
+func (s *UsersStore) Search(ctx context.Context, userID int64, searchTerm string, pagination *Pagination) (*[]UserDataForAddContact, int, error) {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+	
+	query := `
+		SELECT id, username, public_key, COUNT(*) OVER() AS total_count
+		FROM users
+		WHERE username ILIKE $1
+		AND id != $2
+		ORDER BY username
+		LIMIT $3 OFFSET $4
+	`
+
+	searchPattern := "%" + searchTerm + "%"
+
+	rows, err:= s.db.QueryContext(
+		ctx, 
+		query, 
+		searchPattern, 
+		userID, 
+		pagination.Limit, 
+		pagination.CalculateOffset(),
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	
+	totalCount:= 0
+	userDataForAddContactSlice:= make([]UserDataForAddContact, 0, pagination.Limit)
+	for rows.Next() {
+		var userDataForAddContact UserDataForAddContact
+		if err:= rows.Scan(&userDataForAddContact.ID, &userDataForAddContact.Username, &userDataForAddContact.PublicKey, &totalCount); err != nil {
+			return nil, 0, err
+		}
+		userDataForAddContactSlice = append(userDataForAddContactSlice, userDataForAddContact)
+	}
+
+	if err:= rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return &userDataForAddContactSlice, totalCount, nil
 }

@@ -9,7 +9,7 @@ import (
 const contactIDCtxKey ctxKey = "contactID"
 
 type CreateContactRequestRequest struct {
-	Message string `json:"message" validate:"required,min=0,max=100"`
+	Message string `json:"message" validate:"required,min=0,max=1000"`
 }
 
 func (app *application) getContactRequestByIDHandler(w http.ResponseWriter, r *http.Request) {

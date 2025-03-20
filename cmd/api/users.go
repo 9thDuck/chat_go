@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/9thDuck/chat_go.git/internal/store"
 )
@@ -18,6 +19,7 @@ type UpdateUserPayload struct {
 	ProfilePic string `json:"profile_pic" validate:"min=0,max=255"`
 }
 
+// going to be unused
 func (app *application) getUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	userIDFromParam := getUserIDParamFromCtx(r)
 
@@ -41,6 +43,35 @@ func (app *application) getUserByIDHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := app.jsonResponse(w, http.StatusOK, user); err != nil {
+		app.internalError(w, r, err)
+		return
+	}
+}
+
+func (app *application) searchUsersByUsernamesAndGetIDsHandler(w http.ResponseWriter, r *http.Request){
+	searchTerm:= r.URL.Query().Get("q")
+	switch {
+	case strings.TrimSpace(searchTerm) == "":
+		app.badRequestError(w, r, errors.New("search term is required"), "")
+		return
+	case len(searchTerm) < 3:
+		app.badRequestError(w, r, errors.New("search term must be at least 3 characters"), "")
+		return
+	case len(searchTerm) > 50:
+		app.badRequestError(w, r, errors.New("search term must be less than 50 characters"), "")
+		return
+	}
+
+	pagination := getPaginationOptionsFromCtx(r)
+	userDataForAddContactSlice, total, err := app.store.Users.Search(r.Context(), getUserFromCtx(r).ID, searchTerm, pagination)
+	
+	switch err {
+	case nil:
+		if err := app.jsonResponse(w, http.StatusOK, paginatedEnvelope{Records: &userDataForAddContactSlice, TotalRecords: total}); err != nil {
+			app.internalError(w, r, err)
+			return
+		}
+	default:
 		app.internalError(w, r, err)
 		return
 	}
