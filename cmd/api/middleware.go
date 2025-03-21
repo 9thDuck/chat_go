@@ -54,6 +54,8 @@ func (app *application) ValidateTokenMiddleware() func(http.Handler) http.Handle
 				user, err := app.getUser(ctx, refreshTokenUserID)
 				if err != nil {
 					if errors.Is(err, store.ErrNotFound) {
+						app.deleteCookie(w, "access_token")
+						app.deleteCookie(w, "refresh_token")
 						app.unauthorizedError(w, r, store.ErrUnautorized)
 						return
 					}
@@ -82,6 +84,8 @@ func (app *application) ValidateTokenMiddleware() func(http.Handler) http.Handle
 			user, err := app.getUser(ctx, accessTokenUserID)
 			if err != nil {
 				if errors.Is(err, store.ErrNotFound) {
+					app.deleteCookie(w, "access_token")
+					app.deleteCookie(w, "refresh_token")
 					app.unauthorizedError(w, r, store.ErrUnautorized)
 					return
 				}

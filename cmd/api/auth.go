@@ -105,8 +105,8 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
-	deleteCookie(w, "access_token")
-	deleteCookie(w, "refresh_token")
+	app.deleteCookie(w, "access_token")
+	app.deleteCookie(w, "refresh_token")
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -145,7 +145,7 @@ func getUserFromCtx(r *http.Request) *store.User {
 	return user
 }
 
-func deleteCookie(w http.ResponseWriter, cookieName string) {
+func (app *application) deleteCookie(w http.ResponseWriter, cookieName string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     cookieName,
 		Value:    "",
