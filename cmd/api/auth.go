@@ -12,10 +12,10 @@ import (
 const DefaultUserNotFoundErrMsg = "either credentials are invalid or user doesn't exist"
 
 type SignupPayload struct {
-	Username string `json:"username" validate:"required,min=8,max=30"`
-	Email    string `json:"email" validate:"email,required,max=150"`
-	Password string `json:"password" validate:"required,min=8,max=20"`
-	PublicKey string `json:"public_key" validate:"required,min=10,max=70"`
+	Username  string `json:"username" validate:"required,min=8,max=30"`
+	Email     string `json:"email" validate:"email,required,max=150"`
+	Password  string `json:"password" validate:"required,min=8,max=20"`
+	PublicKey string `json:"publicKey" validate:"required,min=10,max=70"`
 }
 
 type LoginPayload struct {

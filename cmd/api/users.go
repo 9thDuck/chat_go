@@ -14,9 +14,9 @@ const (
 )
 
 type UpdateUserPayload struct {
-	FirstName  string `json:"first_name" validate:"min=0,max=30"`
-	LastName   string `json:"last_name" validate:"min=0,max=30"`
-	ProfilePic string `json:"profile_pic" validate:"min=0,max=255"`
+	FirstName  string `json:"firstName" validate:"min=0,max=30"`
+	LastName   string `json:"lastName" validate:"min=0,max=30"`
+	ProfilePic string `json:"profilePic" validate:"min=0,max=255"`
 }
 
 // going to be unused
@@ -48,8 +48,8 @@ func (app *application) getUserByIDHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *application) searchUsersByUsernamesAndGetIDsHandler(w http.ResponseWriter, r *http.Request){
-	searchTerm:= r.URL.Query().Get("q")
+func (app *application) searchUsersByUsernamesAndGetIDsHandler(w http.ResponseWriter, r *http.Request) {
+	searchTerm := r.URL.Query().Get("q")
 	switch {
 	case strings.TrimSpace(searchTerm) == "":
 		app.badRequestError(w, r, errors.New("search term is required"), "")
@@ -64,7 +64,7 @@ func (app *application) searchUsersByUsernamesAndGetIDsHandler(w http.ResponseWr
 
 	pagination := getPaginationOptionsFromCtx(r)
 	userDataForAddContactSlice, total, err := app.store.Users.Search(r.Context(), getUserFromCtx(r).ID, searchTerm, pagination)
-	
+
 	switch err {
 	case nil:
 		if err := app.jsonResponse(w, http.StatusOK, paginatedEnvelope{Records: &userDataForAddContactSlice, TotalRecords: total}); err != nil {

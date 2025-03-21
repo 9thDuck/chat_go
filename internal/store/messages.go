@@ -10,16 +10,16 @@ import (
 
 type Message struct {
 	ID          int64     `json:"id"`
-	SenderID    int64     `json:"sender_id"`
-	ReceiverID  int64     `json:"receiver_id"`
+	SenderID    int64     `json:"senderId"`
+	ReceiverID  int64     `json:"receiverId"`
 	Content     string    `json:"content"`
 	Attachments *[]string `json:"attachments"`
-	IsRead      bool      `json:"is_read"`
-	IsDelivered bool      `json:"is_delivered"`
+	IsRead      bool      `json:"isRead"`
+	IsDelivered bool      `json:"isDelivered"`
 	Version     int64     `json:"version"`
 	Edited      bool      `json:"edited"`
-	CreatedAt   string    `json:"created_at"`
-	UpdatedAt   string    `json:"updated_at"`
+	CreatedAt   string    `json:"createdAt"`
+	UpdatedAt   string    `json:"updatedAt"`
 }
 
 type MessageVersion struct {

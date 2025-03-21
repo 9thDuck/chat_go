@@ -12,11 +12,11 @@ type ContactRequestsStore struct {
 }
 
 type ContactRequest struct {
-	SenderID   int64  `json:"sender_id"`
-	SenderUsername string `json:"sender_username"`
-	ReceiverID   int64  `json:"receiver_id"`
-	ReceiverUsername string `json:"receiver_username"`
-	CreatedAt    string `json:"created_at"`
+	SenderID         int64  `json:"senderId"`
+	SenderUsername   string `json:"senderUsername"`
+	ReceiverID       int64  `json:"receiverId"`
+	ReceiverUsername string `json:"receiverUsername"`
+	CreatedAt        string `json:"createdAt"`
 }
 
 func (s *ContactRequestsStore) Create(ctx context.Context, senderID, receiverID int64) error {
@@ -91,11 +91,11 @@ func (s *ContactRequestsStore) Get(ctx context.Context, senderID int64, paginati
 	for rows.Next() {
 		contactRequest := ContactRequest{}
 		err := rows.Scan(
-			&contactRequest.SenderID, 
-			&contactRequest.ReceiverID, 
-			&contactRequest.CreatedAt, 
-			&contactRequest.SenderUsername, 
-			&contactRequest.ReceiverUsername, 
+			&contactRequest.SenderID,
+			&contactRequest.ReceiverID,
+			&contactRequest.CreatedAt,
+			&contactRequest.SenderUsername,
+			&contactRequest.ReceiverUsername,
 			&total,
 		)
 		if err != nil {

@@ -15,11 +15,11 @@ type UsersStore struct {
 }
 
 type UserDataForAddContact struct {
-	ID              int64  `json:"id"`
-	Username        string `json:"username"`
-	PublicKey       string `json:"public_key"`
-	IsContact       bool   `json:"is_contact"`
-	HasPendingRequest bool `json:"has_pending_request"`
+	ID                int64  `json:"id"`
+	Username          string `json:"username"`
+	PublicKey         string `json:"publicKey"`
+	IsContact         bool   `json:"isContact"`
+	HasPendingRequest bool   `json:"hasPendingRequest"`
 }
 
 type User struct {
@@ -27,14 +27,14 @@ type User struct {
 	Username       string `json:"username"`
 	Email          string `json:"email"`
 	HashedPassword string `json:"-"`
-	PublicKey      string `json:"public_key"`
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-	ProfilePic     string `json:"profile_pic"`
-	RoleID         int64  `json:"role_id"`
+	PublicKey      string `json:"publicKey"`
+	FirstName      string `json:"firstName"`
+	LastName       string `json:"lastName"`
+	ProfilePic     string `json:"profilePic"`
+	RoleID         int64  `json:"roleId"`
 	Role           *Role  `json:"role"`
-	CreatedAt      string `json:"created_at"`
-	UpdatedAt      string `json:"updated_at"`
+	CreatedAt      string `json:"createdAt"`
+	UpdatedAt      string `json:"updatedAt"`
 }
 
 func NewUser(username, email, firstName, lastName, publicKey string) (user *User) {
@@ -242,7 +242,7 @@ func (s *UsersStore) UpdateUserDataByID(ctx context.Context, user *User) error {
 func (s *UsersStore) Search(ctx context.Context, userID int64, searchTerm string, pagination *Pagination) (*[]UserDataForAddContact, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
-	
+
 	query := `
 		WITH contact_status AS (
 			SELECT contact_id as id, true as is_contact
@@ -284,18 +284,18 @@ func (s *UsersStore) Search(ctx context.Context, userID int64, searchTerm string
 	searchPattern := "%" + searchTerm + "%"
 
 	rows, err := s.db.QueryContext(
-		ctx, 
-		query, 
-		userID, 
-		searchPattern, 
-		pagination.Limit, 
+		ctx,
+		query,
+		userID,
+		searchPattern,
+		pagination.Limit,
 		pagination.CalculateOffset(),
 	)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	totalCount := 0
 	userDataForAddContactSlice := make([]UserDataForAddContact, 0, pagination.Limit)
 	for rows.Next() {
