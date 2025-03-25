@@ -17,6 +17,7 @@ type ContactRequest struct {
 	ReceiverID       int64  `json:"receiverId"`
 	ReceiverUsername string `json:"receiverUsername"`
 	CreatedAt        string `json:"createdAt"`
+	MessageContent   string `json:"messageContent"`
 }
 
 func (s *ContactRequestsStore) Create(ctx context.Context, senderID, receiverID int64) error {
@@ -70,10 +71,14 @@ func (s *ContactRequestsStore) Get(ctx context.Context, senderID int64, paginati
 	defer cancel()
 
 	query := `
-		SELECT c.sender_id, c.receiver_id, c.created_at, u.username AS sender_username, u2.username AS receiver_username, COUNT(*) OVER() AS total
+		SELECT c.sender_id, c.receiver_id, c.created_at, u.username AS sender_username, 
+		u2.username AS receiver_username, m.content, COUNT(*) OVER() AS total
 		FROM contact_requests c 
 		JOIN users u ON c.sender_id = u.id
 		JOIN users u2 ON c.receiver_id = u2.id
+		JOIN messages m ON m.sender_id = c.sender_id 
+		  AND m.receiver_id = c.receiver_id
+		  AND m.created_at BETWEEN c.created_at - interval '1 second' AND c.created_at + interval '1 second'
 		WHERE (c.sender_id = $1 OR c.receiver_id = $1) AND c.status = 'pending'
 		ORDER BY ` + pagination.Sort + ` ` + pagination.SortDirection + `
 		LIMIT $2 OFFSET $3`
@@ -96,6 +101,7 @@ func (s *ContactRequestsStore) Get(ctx context.Context, senderID int64, paginati
 			&contactRequest.CreatedAt,
 			&contactRequest.SenderUsername,
 			&contactRequest.ReceiverUsername,
+			&contactRequest.MessageContent,
 			&total,
 		)
 		if err != nil {
