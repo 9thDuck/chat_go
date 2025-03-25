@@ -53,7 +53,7 @@ func (s *MessagesStore) Get(ctx context.Context, userID int64, pagination *Pagin
 		COUNT(*) OVER() AS total
 	FROM messages
 	WHERE (sender_id = $1 OR receiver_id = $1) AND is_delivered = $2
-	ORDER BY ` + pagination.Sort + ` ` + pagination.SortDirection + `
+	ORDER BY created_at ASC
 	LIMIT $3 OFFSET $4`
 
 	rows, err := s.db.QueryContext(

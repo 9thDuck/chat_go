@@ -11,7 +11,8 @@ import (
 )
 
 type UsersStore struct {
-	db *sql.DB
+	db                  *sql.DB
+	EncryptionKeysStore *EncryptionKeysStore
 }
 
 type UserDataForAddContact struct {
@@ -35,6 +36,42 @@ type User struct {
 	Role           *Role  `json:"role"`
 	CreatedAt      string `json:"createdAt"`
 	UpdatedAt      string `json:"updatedAt"`
+}
+
+type UserWithEncryptionKey struct {
+	ID              int64  `json:"id"`
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	HashedPassword  string `json:"-"`
+	PublicKey       string `json:"publicKey"`
+	FirstName       string `json:"firstName"`
+	LastName        string `json:"lastName"`
+	EncryptionKeyID string `json:"-"`
+	EncryptionKey   string `json:"encryptionKey"`
+	ProfilePic      string `json:"profilePic"`
+	RoleID          int64  `json:"roleId"`
+	Role            *Role  `json:"role"`
+	CreatedAt       string `json:"createdAt"`
+	UpdatedAt       string `json:"updatedAt"`
+}
+
+func NewUserWithEncryptionKey(user *User, encryptionKey *EncryptionKey) *UserWithEncryptionKey {
+	return &UserWithEncryptionKey{
+		ID:              user.ID,
+		Username:        user.Username,
+		Email:           user.Email,
+		HashedPassword:  user.HashedPassword,
+		PublicKey:       user.PublicKey,
+		FirstName:       user.FirstName,
+		LastName:        user.LastName,
+		EncryptionKeyID: encryptionKey.ID,
+		EncryptionKey:   encryptionKey.Key,
+		ProfilePic:      user.ProfilePic,
+		RoleID:          user.RoleID,
+		Role:            user.Role,
+		CreatedAt:       user.CreatedAt,
+		UpdatedAt:       user.UpdatedAt,
+	}
 }
 
 func NewUser(username, email, firstName, lastName, publicKey string) (user *User) {
@@ -61,7 +98,7 @@ func (u *User) ValidateCredentials(password string) bool {
 		CompareHashAndPassword([]byte(u.HashedPassword), []byte(password)) == nil
 }
 
-func (s *UsersStore) Create(ctx context.Context, user *User) error {
+func (s *UsersStore) Create(ctx context.Context, user *User, encryptionKey *EncryptionKey) (*UserWithEncryptionKey, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
 	query := `WITH inserted_user AS (
@@ -120,16 +157,27 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 			pqErrorMsg := pqErr.Error()
 			switch {
 			case strings.Contains(pqErrorMsg, "users_email_key"):
-				return ErrDuplicateMail
+				return nil, ErrDuplicateMail
 			case strings.Contains(pqErrorMsg, "users_username_key"):
-				return ErrDuplicateUsername
+				return nil, ErrDuplicateUsername
 			default:
-				return err
+				return nil, err
 			}
 		}
-		return err
+		return nil, err
 	}
-	return nil
+
+	err = s.EncryptionKeysStore.Set(ctx, user.ID, encryptionKey)
+	if err != nil {
+		query := `DELETE FROM users WHERE id = $1`
+		_, err = s.db.ExecContext(ctx, query, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		return nil, err
+	}
+
+	return NewUserWithEncryptionKey(user, encryptionKey), nil
 }
 
 func (s *UsersStore) GetByID(ctx context.Context, user *User) error {
@@ -147,6 +195,49 @@ func (s *UsersStore) GetByID(ctx context.Context, user *User) error {
 		ctx,
 		query,
 		user.ID,
+	).Scan(
+		&user.Username,
+		&user.Email,
+		&user.HashedPassword,
+		&user.FirstName,
+		&user.LastName,
+		&user.PublicKey,
+		&user.RoleID,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.Role.ID,
+		&user.Role.Name,
+		&user.Role.Level,
+		&user.Role.Description,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (s *UsersStore) GetByIDWithEncryptionKey(ctx context.Context, user *UserWithEncryptionKey) error {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+	query := `
+		SELECT 
+		u.username, u.email, u.hashed_password, u.first_name, u.last_name, u.public_key, u.role_id, u.created_at, u.updated_at,
+		r.id, r.name, r.level, r.description, ek.key
+		FROM 
+		users u JOIN roles r ON u.role_id = r.id
+		JOIN encryption_keys ek ON u.id = ek.user_id
+		WHERE u.id=$1 AND ek.id=$2`
+
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		user.ID,
+		user.EncryptionKeyID,
 	).Scan(
 		&user.Username,
 		&user.Email,
@@ -318,4 +409,56 @@ func (s *UsersStore) Search(ctx context.Context, userID int64, searchTerm string
 	}
 
 	return &userDataForAddContactSlice, totalCount, nil
+}
+
+func (s *UsersStore) GetUserWithEncryptionKey(ctx context.Context, userID int64, encryptionKeyID string) (*UserWithEncryptionKey, error) {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+
+	query := `
+		SELECT 
+		u.username, u.email, u.hashed_password, u.first_name, u.last_name, u.public_key, u.role_id, u.created_at, u.updated_at,
+		r.id, r.name, r.level, r.description, ek.key
+		FROM 
+		users u 
+		JOIN roles r ON u.role_id = r.id
+		JOIN encryption_keys ek ON u.id = ek.user_id
+		WHERE u.id=$1 AND ek.key_id=$2`
+
+	userWithKey := &UserWithEncryptionKey{
+		ID:              userID,
+		EncryptionKeyID: encryptionKeyID,
+		Role:            &Role{},
+	}
+
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		userID,
+		encryptionKeyID,
+	).Scan(
+		&userWithKey.Username,
+		&userWithKey.Email,
+		&userWithKey.HashedPassword,
+		&userWithKey.FirstName,
+		&userWithKey.LastName,
+		&userWithKey.PublicKey,
+		&userWithKey.RoleID,
+		&userWithKey.CreatedAt,
+		&userWithKey.UpdatedAt,
+		&userWithKey.Role.ID,
+		&userWithKey.Role.Name,
+		&userWithKey.Role.Level,
+		&userWithKey.Role.Description,
+		&userWithKey.EncryptionKey,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return userWithKey, nil
 }

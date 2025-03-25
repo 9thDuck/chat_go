@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	userCtxKey   ctxKey = "user"
-	userIDCtxKey ctxKey = "userID"
+	userCtxKey            ctxKey = "user"
+	userIDCtxKey          ctxKey = "userID"
+	encryptionKeyIDCtxKey ctxKey = "encryptionKeyID"
 )
 
 type UpdateUserPayload struct {
@@ -78,7 +79,17 @@ func (app *application) searchUsersByUsernamesAndGetIDsHandler(w http.ResponseWr
 }
 
 func (app *application) getAuthenticatedUserHandler(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromCtx(r)
+	encryptionKeyID := getEncryptionKeyIDFromCtx(r)
+	if encryptionKeyID == "" {
+		app.badRequestError(w, r, errors.New("encryption key ID is required"), "")
+		return
+	}
+
+	user, err := app.getUserWithEncryptionKey(r.Context(), getUserFromCtx(r).ID, encryptionKeyID)
+	if err != nil {
+		app.internalError(w, r, err)
+		return
+	}
 	if err := app.jsonResponse(w, http.StatusOK, &user); err != nil {
 		app.internalError(w, r, err)
 		return
@@ -153,4 +164,17 @@ func (app *application) deleteCookie(w http.ResponseWriter, cookieName string) {
 		MaxAge:   -1,
 		HttpOnly: true,
 	})
+}
+
+func getEncryptionKeyIDFromCtx(r *http.Request) string {
+	id := r.Context().Value(encryptionKeyIDCtxKey)
+	if id == nil {
+		return ""
+	}
+
+	idStr, ok := id.(string)
+	if !ok {
+		return ""
+	}
+	return idStr
 }

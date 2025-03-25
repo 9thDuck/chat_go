@@ -21,8 +21,15 @@ type Storage struct {
 	Misc interface {
 		Close() error
 	}
+
+	EncryptionKeys interface {
+		Get(ctx context.Context, userID int64, encryptionKeyID string) (*store.EncryptionKey, error)
+		Set(ctx context.Context, userID int64, encryptionKey *store.EncryptionKey) error
+		Delete(ctx context.Context, userID int64, encryptionKeyID string) error
+	}
 }
 type ExpiryTimes struct {
-	Users    time.Duration
-	Contacts time.Duration
+	Users          time.Duration
+	Contacts       time.Duration
+	EncryptionKeys time.Duration
 }

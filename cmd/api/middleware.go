@@ -176,6 +176,51 @@ func (app *application) getUser(ctx context.Context, userID int64) (*store.User,
 	return user, nil
 }
 
+func (app *application) encryptionIDMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := getUserFromCtx(r)
+		encryptionKeyID, err := r.Cookie(fmt.Sprintf("%s_%d", encryptionKeyIDCtxKey, user.ID))
+		if err != nil || encryptionKeyID.Value == "" {
+			app.badRequestError(w, r, errors.New("encryption key ID is required"), "")
+			return
+		}
+		ctx := context.WithValue(r.Context(), encryptionKeyIDCtxKey, encryptionKeyID.Value)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (app *application) getUserWithEncryptionKey(ctx context.Context, userID int64, encryptionKeyID string) (*store.UserWithEncryptionKey, error) {
+	user, err := app.getUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if app.config.cacheCfg.initialised {
+		encryptionKey, err := app.cache.EncryptionKeys.Get(ctx, userID, encryptionKeyID)
+		if err != nil {
+			return nil, err
+		}
+		if encryptionKey != nil {
+			return store.NewUserWithEncryptionKey(user, encryptionKey), nil
+		}
+	}
+
+	encryptionKey, err := app.store.EncryptionKeys.Get(ctx, userID, encryptionKeyID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if app.config.cacheCfg.initialised {
+		err = app.cache.EncryptionKeys.Set(ctx, userID, encryptionKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return store.NewUserWithEncryptionKey(user, encryptionKey), nil
+}
+
 // func (app *application) roleChangingAuthorityMiddleware(requiredRoleName string, next http.HandlerFunc) http.HandlerFunc {
 // 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 // 		user := getUserFromCtx(r)

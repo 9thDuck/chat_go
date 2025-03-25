@@ -8,9 +8,10 @@ import (
 
 type Storage struct {
 	Users interface {
-		Create(ctx context.Context, userP *User) error
+		Create(ctx context.Context, user *User, encryptionKey *EncryptionKey) (*UserWithEncryptionKey, error)
 		GetByEmail(ctx context.Context, email string) (*User, error)
 		GetByID(ctx context.Context, userP *User) error
+		GetUserWithEncryptionKey(ctx context.Context, userID int64, encryptionKeyID string) (*UserWithEncryptionKey, error)
 		UpdateUserDataByID(ctx context.Context, user *User) error
 		Search(ctx context.Context, userID int64, searchTerm string, pagination *Pagination) (*[]UserDataForAddContact, int, error)
 	}
@@ -38,15 +39,22 @@ type Storage struct {
 		Get(ctx context.Context, userID int64, pagination *Pagination) (*[]Message, int, error)
 		Create(ctx context.Context, message *Message) error
 	}
+
+	EncryptionKeys interface {
+		Get(ctx context.Context, userID int64, encryptionKeyID string) (*EncryptionKey, error)
+		Set(ctx context.Context, userID int64, encryptionKey *EncryptionKey) error
+		Delete(ctx context.Context, userID int64, encryptionKeyID string) error
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Users:           &UsersStore{db},
+		Users:           &UsersStore{db: db, EncryptionKeysStore: &EncryptionKeysStore{db: db}},
 		Roles:           &RolesStore{db},
 		Contacts:        &ContactsStore{db},
 		ContactRequests: &ContactRequestsStore{db},
 		Messages:        &MessagesStore{db},
+		EncryptionKeys:  &EncryptionKeysStore{db},
 	}
 }
 

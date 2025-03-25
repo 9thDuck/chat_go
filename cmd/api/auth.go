@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -12,10 +13,12 @@ import (
 const DefaultUserNotFoundErrMsg = "either credentials are invalid or user doesn't exist"
 
 type SignupPayload struct {
-	Username  string `json:"username" validate:"required,min=8,max=30"`
-	Email     string `json:"email" validate:"email,required,max=150"`
-	Password  string `json:"password" validate:"required,min=8,max=20"`
-	PublicKey string `json:"publicKey" validate:"required,min=10,max=70"`
+	Username        string `json:"username" validate:"required,min=8,max=30"`
+	Email           string `json:"email" validate:"email,required,max=150"`
+	Password        string `json:"password" validate:"required,min=8,max=20"`
+	PublicKey       string `json:"publicKey" validate:"required,min=10,max=70"`
+	EncryptionKey   string `json:"encryptionKey" validate:"required,min=10,max=100"`
+	EncryptionKeyID string `json:"encryptionKeyId" validate:"required,min=10,max=100"`
 }
 
 type LoginPayload struct {
@@ -47,7 +50,12 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 
 	user.SetHashedPassword(payload.Password)
 
-	if err := app.store.Users.Create(ctx, &user); err != nil {
+	encryptionKeyData := store.EncryptionKey{
+		ID:  payload.EncryptionKeyID,
+		Key: payload.EncryptionKey,
+	}
+	userWithEncryptionKey, err := app.store.Users.Create(ctx, &user, &encryptionKeyData)
+	if err != nil {
 		switch err {
 		case store.ErrDuplicateMail:
 			app.badRequestError(w, r, err, "")
@@ -59,7 +67,17 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := app.jsonResponse(w, http.StatusCreated, user); err != nil {
+	http.SetCookie(w, &http.Cookie{
+		Name:     fmt.Sprintf("encryption_key_id_%d", userWithEncryptionKey.ID),
+		Value:    userWithEncryptionKey.EncryptionKeyID,
+		Path:     "/",
+		MaxAge:   int(time.Hour * 24 * 30 * 365 * 9),
+		SameSite: http.SameSiteLaxMode,
+		Secure:   app.config.env == "production",
+		HttpOnly: true,
+	})
+
+	if err := app.jsonResponse(w, http.StatusCreated, userWithEncryptionKey); err != nil {
 		app.internalError(w, r, err)
 		return
 	}
@@ -77,8 +95,8 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := app.store.Users.GetByEmail(r.Context(), payload.Email)
-
+	ctx := r.Context()
+	user, err := app.store.Users.GetByEmail(ctx, payload.Email)
 	if err != nil {
 		app.notFoundError(w, r, err, DefaultUserNotFoundErrMsg)
 		return
@@ -89,6 +107,19 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	encryptionKeyIdCookie, err := r.Cookie(fmt.Sprintf("%s_%d", "encryption_key_id", user.ID))
+	if err != nil {
+		app.badRequestError(w, r, errors.New("encryption key id not found"), "")
+		return
+	}
+
+	encryptionKey, err := app.store.EncryptionKeys.Get(ctx, user.ID, encryptionKeyIdCookie.Value)
+	if err != nil {
+		app.internalError(w, r, err)
+		return
+	}
+	userWithEncryptionKey := store.NewUserWithEncryptionKey(user, encryptionKey)
+
 	accessTokenCookie, refreshTokenCookie, err := app.makeAuthCookiesSet(user.ID)
 	if err != nil {
 		app.internalError(w, r, err)
@@ -98,7 +129,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, accessTokenCookie)
 	http.SetCookie(w, refreshTokenCookie)
 
-	if err := app.jsonResponse(w, http.StatusOK, &user); err != nil {
+	if err := app.jsonResponse(w, http.StatusOK, userWithEncryptionKey); err != nil {
 		app.internalError(w, r, err)
 		return
 	}
