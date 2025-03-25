@@ -1,0 +1,28 @@
+# Development Setup
+
+1. ensure you have go installed
+2. ensure you have a .env file in the root of the project with the following variables as shown in .env.example
+3. docker daemon is running
+4. To spin up the local databases, from the root of the project run the following command
+
+```bash
+docker compose up -d
+```
+
+5. To apply the migrations, from the root of the project run the following command
+
+```bash
+make migrate-up
+```
+
+6. To install the dependencies, from the root of the project run the following command
+
+```bash
+go mod tidy
+```
+
+7. To run the dev server, ensure you have air installed. You can get it from [here](https://github.com/cosmtrek/air). Then run the following command from root of the project
+
+```bash
+air
+```
