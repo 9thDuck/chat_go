@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/9thDuck/chat_go.git/internal/domain"
 )
 
 type Storage struct {
@@ -17,7 +19,7 @@ type Storage struct {
 	}
 
 	Roles interface {
-		GetByName(ctx context.Context, roleName string) (*Role, error)
+		GetByName(ctx context.Context, roleName string) (*domain.Role, error)
 	}
 
 	Contacts interface {
@@ -38,6 +40,7 @@ type Storage struct {
 	Messages interface {
 		Get(ctx context.Context, userID int64, pagination *Pagination) (*[]Message, int, error)
 		Create(ctx context.Context, message *Message) error
+		Delete(ctx context.Context, messageID int64) error
 	}
 
 	EncryptionKeys interface {

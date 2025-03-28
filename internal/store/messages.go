@@ -5,22 +5,11 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/9thDuck/chat_go.git/internal/domain"
 	"github.com/lib/pq"
 )
 
-type Message struct {
-	ID          int64     `json:"id"`
-	SenderID    int64     `json:"senderId"`
-	ReceiverID  int64     `json:"receiverId"`
-	Content     string    `json:"content"`
-	Attachments *[]string `json:"attachments"`
-	IsRead      bool      `json:"isRead"`
-	IsDelivered bool      `json:"isDelivered"`
-	Version     int64     `json:"version"`
-	Edited      bool      `json:"edited"`
-	CreatedAt   string    `json:"createdAt"`
-	UpdatedAt   string    `json:"updatedAt"`
-}
+type Message domain.Message
 
 type MessageVersion struct {
 	ID        int64  `json:"id"`
@@ -157,6 +146,14 @@ func (s *MessagesStore) Create(ctx context.Context, message *Message) error {
 
 		return nil
 	})
+}
+
+func (s *MessagesStore) Delete(ctx context.Context, messageID int64) error {
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE id = $1`, messageID)
+	return err
 }
 
 func addAttachments(ctx context.Context, tx *sql.Tx, messageID int64, attachments *[]string) error {

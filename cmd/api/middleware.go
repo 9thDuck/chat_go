@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/9thDuck/chat_go.git/internal/domain"
 	"github.com/9thDuck/chat_go.git/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
@@ -150,7 +151,7 @@ func (app *application) userDetailsUpdateGuardMiddleware(next http.HandlerFunc) 
 
 func (app *application) getUser(ctx context.Context, userID int64) (*store.User, error) {
 	user := &store.User{ID: userID}
-	user.Role = &store.Role{}
+	user.Role = &domain.Role{}
 	if app.config.cacheCfg.initialised {
 		user, err := app.cache.Users.Get(ctx, userID)
 		if err != nil {

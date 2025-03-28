@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/9thDuck/chat_go.git/internal/domain"
 	"github.com/lib/pq"
 )
 
@@ -11,14 +12,7 @@ type ContactRequestsStore struct {
 	db *sql.DB
 }
 
-type ContactRequest struct {
-	SenderID         int64  `json:"senderId"`
-	SenderUsername   string `json:"senderUsername"`
-	ReceiverID       int64  `json:"receiverId"`
-	ReceiverUsername string `json:"receiverUsername"`
-	CreatedAt        string `json:"createdAt"`
-	MessageContent   string `json:"messageContent"`
-}
+type ContactRequest domain.ContactRequest
 
 func (s *ContactRequestsStore) Create(ctx context.Context, senderID, receiverID int64) error {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)

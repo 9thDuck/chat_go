@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
+	"github.com/9thDuck/chat_go.git/cmd/api/ws"
 	"github.com/9thDuck/chat_go.git/internal/store"
 )
 
@@ -85,6 +87,16 @@ func (app *application) createMessageHandler(w http.ResponseWriter, r *http.Requ
 	switch err {
 	case nil:
 		app.jsonResponse(w, http.StatusCreated, &message)
+		jsonMessage, err := json.Marshal(ws.MessageEvent{
+			Message: message,
+			Type:    ws.EVENT_MESSAGE,
+		})
+		if err != nil {
+			app.logger.Errorw("Failed to marshal message", "error", err)
+		}
+		if done := app.socketHub.WriteToClient(receiverID, jsonMessage); done {
+			app.store.Messages.Delete(r.Context(), message.ID)
+		}
 		return
 	default:
 		app.internalError(w, r, err)

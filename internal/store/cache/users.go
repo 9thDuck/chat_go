@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/9thDuck/chat_go.git/internal/domain"
 	"github.com/9thDuck/chat_go.git/internal/store"
 
 	"github.com/go-redis/redis/v8"
@@ -28,7 +29,7 @@ func (s *UsersStore) Get(ctx context.Context, userID int64) (*store.User, error)
 	}
 
 	var user store.User
-	user.Role = &store.Role{}
+	user.Role = &domain.Role{}
 	if data == "" {
 		return nil, store.ErrNotFound
 	}

@@ -6,9 +6,12 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/9thDuck/chat_go.git/internal/domain"
 	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type User domain.User
 
 type UsersStore struct {
 	db                  *sql.DB
@@ -23,36 +26,21 @@ type UserDataForAddContact struct {
 	HasPendingRequest bool   `json:"hasPendingRequest"`
 }
 
-type User struct {
-	ID             int64  `json:"id"`
-	Username       string `json:"username"`
-	Email          string `json:"email"`
-	HashedPassword string `json:"-"`
-	PublicKey      string `json:"publicKey"`
-	FirstName      string `json:"firstName"`
-	LastName       string `json:"lastName"`
-	ProfilePic     string `json:"profilePic"`
-	RoleID         int64  `json:"roleId"`
-	Role           *Role  `json:"role"`
-	CreatedAt      string `json:"createdAt"`
-	UpdatedAt      string `json:"updatedAt"`
-}
-
 type UserWithEncryptionKey struct {
-	ID              int64  `json:"id"`
-	Username        string `json:"username"`
-	Email           string `json:"email"`
-	HashedPassword  string `json:"-"`
-	PublicKey       string `json:"publicKey"`
-	FirstName       string `json:"firstName"`
-	LastName        string `json:"lastName"`
-	EncryptionKeyID string `json:"-"`
-	EncryptionKey   string `json:"encryptionKey"`
-	ProfilePic      string `json:"profilePic"`
-	RoleID          int64  `json:"roleId"`
-	Role            *Role  `json:"role"`
-	CreatedAt       string `json:"createdAt"`
-	UpdatedAt       string `json:"updatedAt"`
+	ID              int64        `json:"id"`
+	Username        string       `json:"username"`
+	Email           string       `json:"email"`
+	HashedPassword  string       `json:"-"`
+	PublicKey       string       `json:"publicKey"`
+	FirstName       string       `json:"firstName"`
+	LastName        string       `json:"lastName"`
+	EncryptionKeyID string       `json:"-"`
+	EncryptionKey   string       `json:"encryptionKey"`
+	ProfilePic      string       `json:"profilePic"`
+	RoleID          int64        `json:"roleId"`
+	Role            *domain.Role `json:"role"`
+	CreatedAt       string       `json:"createdAt"`
+	UpdatedAt       string       `json:"updatedAt"`
 }
 
 func NewUserWithEncryptionKey(user *User, encryptionKey *EncryptionKey) *UserWithEncryptionKey {
@@ -277,7 +265,7 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 
 	user := User{
 		Email: email,
-		Role:  &Role{},
+		Role:  &domain.Role{},
 	}
 
 	err := s.db.QueryRowContext(
@@ -428,7 +416,7 @@ func (s *UsersStore) GetUserWithEncryptionKey(ctx context.Context, userID int64,
 	userWithKey := &UserWithEncryptionKey{
 		ID:              userID,
 		EncryptionKeyID: encryptionKeyID,
-		Role:            &Role{},
+		Role:            &domain.Role{},
 	}
 
 	err := s.db.QueryRowContext(

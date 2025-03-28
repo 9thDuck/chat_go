@@ -3,20 +3,15 @@ package store
 import (
 	"context"
 	"database/sql"
+
+	"github.com/9thDuck/chat_go.git/internal/domain"
 )
 
 type RolesStore struct {
 	db *sql.DB
 }
 
-type Role struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Level       int    `json:"level"`
-	Description string `json:"description"`
-}
-
-func (s *RolesStore) GetByName(ctx context.Context, name string) (*Role, error) {
+func (s *RolesStore) GetByName(ctx context.Context, name string) (*domain.Role, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
 
@@ -26,7 +21,7 @@ func (s *RolesStore) GetByName(ctx context.Context, name string) (*Role, error) 
 	FROM roles
 	WHERE name=$1`
 
-	role := Role{Name: name}
+	role := domain.Role{Name: name}
 
 	err := s.db.QueryRowContext(
 		ctx,

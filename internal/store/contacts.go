@@ -11,13 +11,6 @@ type ContactsStore struct {
 	db *sql.DB
 }
 
-type Contact struct {
-	UserID    int64  `json:"user_id"`
-	ContactID int64  `json:"contact_id"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-}
-
 func (s *ContactsStore) Get(ctx context.Context, userID int64, pagination *Pagination) (*[]int64, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
@@ -32,25 +25,24 @@ func (s *ContactsStore) Get(ctx context.Context, userID int64, pagination *Pagin
 		WHERE user_id = $1 OR contact_id = $1
 		LIMIT $2 OFFSET $3`
 
-		
-		rows, err := s.db.QueryContext(ctx, query, userID, pagination.Limit, pagination.CalculateOffset())
+	rows, err := s.db.QueryContext(ctx, query, userID, pagination.Limit, pagination.CalculateOffset())
+	if err != nil {
+		return nil, 0, err
+	}
+
+	defer rows.Close()
+
+	contactIDSlice := make([]int64, 0, pagination.Limit)
+	total := 0
+
+	for rows.Next() {
+		var contactID int64
+		err := rows.Scan(&contactID, &total)
 		if err != nil {
 			return nil, 0, err
 		}
-		
-		defer rows.Close()
-		
-		contactIDSlice := make([]int64, 0, pagination.Limit)
-		total := 0
-		
-		for rows.Next() {
-			var contactID int64
-			err := rows.Scan(&contactID, &total)
-			if err != nil {
-				return nil, 0, err
-			}
-			contactIDSlice = append(contactIDSlice, contactID)
-		}
+		contactIDSlice = append(contactIDSlice, contactID)
+	}
 
 	return &contactIDSlice, total, nil
 }
@@ -159,14 +151,14 @@ func (s *ContactsStore) Search(ctx context.Context, userID int64, searchTerm str
 	`
 
 	// query := `
-	// 	SELECT 
-	// 		CASE 
+	// 	SELECT
+	// 		CASE
 	// 			WHEN c.user_id = $1 THEN c.contact_id
 	// 			ELSE c.user_id
 	// 		END as contact_id,
 	// 		COUNT(*) OVER() as total
 	// 	FROM contacts c
-	// 	JOIN users u ON u.id = CASE 
+	// 	JOIN users u ON u.id = CASE
 	// 		WHEN c.user_id = $1 THEN c.contact_id
 	// 		ELSE c.user_id
 	// 	END

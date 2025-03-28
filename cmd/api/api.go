@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/9thDuck/chat_go.git/cmd/api/ws"
 	"github.com/9thDuck/chat_go.git/internal/auth"
 	cloudStorage "github.com/9thDuck/chat_go.git/internal/cloud_storage"
 	"github.com/9thDuck/chat_go.git/internal/store"
@@ -20,6 +21,7 @@ type application struct {
 	cache         cache.Storage
 	logger        *zap.SugaredLogger
 	authenticator auth.Authenticator
+	socketHub     *ws.Hub
 	cloud         *cloudStorage.CloudStorage
 }
 
@@ -100,6 +102,14 @@ func (app *application) mount() http.Handler {
 			})
 		})
 
+		r.Route("/ws", func(r chi.Router) {
+			r.Use(app.ValidateTokenMiddleware())
+			r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				userID := getUserFromCtx(r).ID
+				ws.Serve(w, r, app.socketHub, userID)
+			})
+		})
+
 		r.Route("/cloud", func(r chi.Router) {
 			r.Use(app.ValidateTokenMiddleware())
 			r.Route("/presignedurl", func(r chi.Router) {
@@ -119,6 +129,8 @@ func (app *application) run(handler http.Handler) error {
 		IdleTimeout:  time.Minute,
 		Handler:      handler,
 	}
+	app.socketHub = ws.NewHub()
+	go app.socketHub.Run()
 	app.logger.Infow("Server listening", "port", app.config.addr)
 
 	return srv.ListenAndServe()

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/9thDuck/chat_go.git/internal/domain"
 	"github.com/9thDuck/chat_go.git/internal/store"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -43,7 +44,7 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 		Username:  payload.Username,
 		Email:     payload.Email,
 		PublicKey: payload.PublicKey,
-		Role: &store.Role{
+		Role: &domain.Role{
 			Name: "user",
 		},
 	}
